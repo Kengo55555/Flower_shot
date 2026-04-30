@@ -56,6 +56,16 @@ export async function getAllImageKeys(): Promise<string[]> {
   });
 }
 
+export async function clearAllImages(): Promise<void> {
+  const database = await openDB();
+  const tx = database.transaction(INDEXEDDB_STORE_NAME, "readwrite");
+  tx.objectStore(INDEXEDDB_STORE_NAME).clear();
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 export async function getStorageEstimate(): Promise<{
   usage: number;
   quota: number;

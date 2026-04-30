@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import CaptureButton from "../components/camera/CaptureButton";
 import MonthlySummary from "../components/gamification/MonthlySummary";
 import BadgeDisplay from "../components/gamification/BadgeDisplay";
-import PwaInstallBanner from "../components/common/PwaInstallBanner";
 import { useRecords } from "../hooks/useRecords";
 import { useUsageLimit } from "../hooks/useUsageLimit";
 import { useCapture } from "../hooks/useCapture";
@@ -41,33 +40,31 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-20">
-      <PwaInstallBanner />
-
-      <div className="px-4 pt-6 pb-4">
+    <div className="flex flex-col h-[100dvh] pb-16 overflow-hidden">
+      <div className="px-4 pt-6 pb-2">
         <h1 className="text-2xl font-bold text-center mb-1">🌸 Flower Shot</h1>
-        <p className="text-center text-sm text-gray-500 mb-5">
+        <p className="text-center text-sm text-gray-500 mb-4">
           おはなの なまえを しらべよう！
         </p>
 
         {!isLoading && records.length > 0 && (
           <>
             <MonthlySummary records={records} />
-            <div className="mt-4">
+            <div className="mt-3">
               <BadgeDisplay totalUniqueCount={totalUnique} />
             </div>
           </>
         )}
 
         {userRemaining <= 10 && userRemaining > 0 && (
-          <div className="bg-yellow rounded-xl p-3 mt-4 text-center text-sm">
+          <div className="bg-yellow rounded-xl p-3 mt-3 text-center text-sm">
             きょうは あと <span className="font-bold">{userRemaining}かい</span>{" "}
             あそべるよ
           </div>
         )}
 
         {!canUse && (
-          <div className="bg-gray-200 rounded-xl p-3 mt-4 text-center text-sm">
+          <div className="bg-gray-200 rounded-xl p-3 mt-3 text-center text-sm">
             きょうの おはなさがしは おしまい！あしたまた あそぼうね
           </div>
         )}

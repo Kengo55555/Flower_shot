@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getImage } from "../../lib/indexeddb";
 import type { FlowerRecord } from "../../types";
 
@@ -13,19 +13,21 @@ function formatDate(date: Date): string {
 
 export default function FlowerCard({ record, onClick }: FlowerCardProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const urlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    let url: string | null = null;
-    getImage(record.photoLocalKey).then((blob) => {
+    const key = record.photoLocalKey || record.id;
+    getImage(key).then((blob) => {
       if (blob) {
-        url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob);
+        urlRef.current = url;
         setImageUrl(url);
       }
     });
     return () => {
-      if (url) URL.revokeObjectURL(url);
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
     };
-  }, [record.photoLocalKey]);
+  }, [record.photoLocalKey, record.id]);
 
   return (
     <button
