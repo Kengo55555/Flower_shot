@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CaptureButton from "../components/camera/CaptureButton";
 import MonthlySummary from "../components/gamification/MonthlySummary";
-import BadgeDisplay from "../components/gamification/BadgeDisplay";
 import { useRecords } from "../hooks/useRecords";
 import { useUsageLimit } from "../hooks/useUsageLimit";
 import { useCapture } from "../hooks/useCapture";
@@ -14,8 +13,6 @@ export default function HomePage() {
   const { userRemaining, canUse } = useUsageLimit();
   const { setCaptureData } = useCapture();
   const [safetyShown, setSafetyShown] = useState(false);
-
-  const totalUnique = new Set(records.map((r) => r.flowerNameOriginal)).size;
 
   useEffect(() => {
     if (!localStorage.getItem("flower_shot_safety_shown")) {
@@ -48,12 +45,7 @@ export default function HomePage() {
         </p>
 
         {!isLoading && records.length > 0 && (
-          <>
-            <MonthlySummary records={records} />
-            <div className="mt-3">
-              <BadgeDisplay totalUniqueCount={totalUnique} />
-            </div>
-          </>
+          <MonthlySummary records={records} />
         )}
 
         {userRemaining <= 10 && userRemaining > 0 && (
