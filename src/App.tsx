@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { CaptureProvider } from "./hooks/useCapture";
+import { ThemeProvider } from "./hooks/useTheme";
 import AuthGuard from "./components/common/AuthGuard";
 import AdminGuard from "./components/common/AdminGuard";
 import BottomNav from "./components/common/BottomNav";
@@ -29,6 +30,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <AuthProvider>
         <CaptureProvider>
           <Routes>
@@ -136,6 +138,7 @@ export default function App() {
           </Routes>
         </CaptureProvider>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { useTheme } from "../../hooks/useTheme";
 
 interface CaptureButtonProps {
   onCapture: (file: File) => void;
@@ -7,6 +8,7 @@ interface CaptureButtonProps {
 
 export default function CaptureButton({ onCapture, disabled }: CaptureButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { buttonColor } = useTheme();
 
   const handleClick = () => {
     inputRef.current?.click();
@@ -33,11 +35,8 @@ export default function CaptureButton({ onCapture, disabled }: CaptureButtonProp
       <button
         onClick={handleClick}
         disabled={disabled}
-        className={`w-32 h-32 rounded-full flex flex-col items-center justify-center text-white text-lg font-bold shadow-lg transition-transform active:scale-95 ${
-          disabled
-            ? "bg-gray-300 cursor-not-allowed"
-            : "bg-pink hover:bg-pink-light"
-        }`}
+        className="w-32 h-32 rounded-full flex flex-col items-center justify-center text-white text-lg font-bold shadow-lg transition-transform active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed"
+        style={disabled ? undefined : { backgroundColor: buttonColor }}
       >
         <span className="text-4xl">📷</span>
         <span className="text-sm mt-1">さつえい</span>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import CaptureButton from "../components/camera/CaptureButton";
 import MonthlySummary from "../components/gamification/MonthlySummary";
 import { useRecords } from "../hooks/useRecords";
+import { useTheme } from "../hooks/useTheme";
 import { useUsageLimit } from "../hooks/useUsageLimit";
 import { useCapture } from "../hooks/useCapture";
 import { compressImage } from "../lib/image-utils";
@@ -12,6 +13,7 @@ export default function HomePage() {
   const { records, isLoading } = useRecords();
   const { userRemaining, canUse } = useUsageLimit();
   const { setCaptureData } = useCapture();
+  const { emoji } = useTheme();
   const [safetyShown, setSafetyShown] = useState(false);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col h-[100dvh] pb-16 overflow-hidden">
       <div className="px-4 pt-6 pb-2">
-        <h1 className="text-2xl font-bold text-center mb-1">🌻 Flower Shot 🌻</h1>
+        <h1 className="text-2xl font-bold text-center mb-1">{emoji} Flower Shot {emoji}</h1>
         <p className="text-center text-sm text-gray-500 mb-4">
           おはなの なまえを しらべよう！
         </p>
