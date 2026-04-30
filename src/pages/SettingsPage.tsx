@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useUsageLimit } from "../hooks/useUsageLimit";
 import { useRecords } from "../hooks/useRecords";
-import { usePwaInstall } from "../hooks/usePwaInstall";
 import { useTheme } from "../hooks/useTheme";
 import { signOutUser } from "../lib/auth";
 import { updateUserSettings } from "../lib/firestore";
@@ -36,17 +35,18 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { userCount } = useUsageLimit();
   const { records } = useRecords();
-  const { isInstalled } = usePwaInstall();
   const { bgColor, buttonColor, emoji, setBgColor, setButtonColor, setEmoji } = useTheme();
   const [locationOn, setLocationOn] = useState(
     user?.settings.locationDefaultOn ?? true
   );
-  const [storageMB, setStorageMB] = useState(0);
+  const [storageBytes, setStorageBytes] = useState(0);
+  const [storageQuota, setStorageQuota] = useState(0);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     getStorageEstimate().then((est) => {
-      setStorageMB(Math.round(est.usage / 1024 / 1024));
+      setStorageBytes(est.usage);
+      setStorageQuota(est.quota);
     });
   }, []);
 
@@ -165,12 +165,30 @@ export default function SettingsPage() {
         {/* Storage */}
         <section className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
           <h2 className="text-sm text-gray-500 mb-3">ストレージ</h2>
-          <div className="space-y-2 text-sm">
-            <p>📸 しゃしん: {records.length}まい（やく{storageMB}MB）</p>
-            <p>📊 きろく: {records.length}けん</p>
-            <p>🌸 きょうの はんてい: {userCount}かい / {DAILY_USER_LIMIT}かい</p>
-            <p>🏠 ホームがめん ついか: {isInstalled ? "✅ ずみ" : "❌ まだ"}</p>
-          </div>
+          {(() => {
+            const usageMB = storageBytes / 1024 / 1024;
+            const quotaMB = storageQuota / 1024 / 1024;
+            const maxPhotos = 500;
+            const remainPhotos = Math.max(0, maxPhotos - records.length);
+            const remainMB = Math.max(0, quotaMB - usageMB);
+            const usageStr = usageMB >= 1
+              ? `${usageMB.toFixed(1)}MB`
+              : `${Math.round(storageBytes / 1024)}KB`;
+            return (
+              <div className="space-y-2 text-sm">
+                <p>📸 ほぞんずみ: {records.length}まい（{usageStr}）</p>
+                <p>📦 のこり: やく{remainPhotos}まい（{remainMB.toFixed(0)}MB）</p>
+                <p>🌸 きょうの はんてい: {userCount}かい / {DAILY_USER_LIMIT}かい</p>
+                <div className="bg-gray-50 rounded-lg p-3 mt-2 text-xs text-gray-500 space-y-1">
+                  <p className="font-bold text-gray-600">ほぞんの せいやくじこう</p>
+                  <p>・しゃしんは このスマホだけに ほぞんされます</p>
+                  <p>・さいだい やく{maxPhotos}まい ほぞんできます（やく1GB）</p>
+                  <p>・べつの スマホでは しゃしんは みられません</p>
+                  <p>・アプリを けすと しゃしんも きえます</p>
+                </div>
+              </div>
+            );
+          })()}
         </section>
 
         {/* App Info */}

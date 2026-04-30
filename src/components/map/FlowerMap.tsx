@@ -1,17 +1,15 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
+import { getImage } from "../../lib/indexeddb";
 import type { FlowerRecord } from "../../types";
 
-// Fix Leaflet default icon issue with Vite
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
+const pinIcon = L.divIcon({
+  html: '<span style="font-size:32px">📍</span>',
+  className: "",
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
 });
 
 interface FlowerMapProps {
@@ -34,6 +32,34 @@ function formatDate(date: Date): string {
   return `${date.getMonth() + 1}がつ ${date.getDate()}にち`;
 }
 
+function FlowerPopup({ record }: { record: FlowerRecord }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const key = record.photoLocalKey || record.id;
+    getImage(key).then((blob) => {
+      if (blob) setImageUrl(URL.createObjectURL(blob));
+    });
+    return () => {
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
+    };
+  }, [record.photoLocalKey, record.id]);
+
+  return (
+    <div className="text-center" style={{ minWidth: 120 }}>
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={record.flowerName}
+          style={{ width: 120, height: 90, objectFit: "cover", borderRadius: 8, marginBottom: 4 }}
+        />
+      )}
+      <p style={{ fontWeight: "bold", fontSize: 14, margin: "4px 0 2px" }}>{record.flowerName}</p>
+      <p style={{ fontSize: 11, color: "#888" }}>{formatDate(record.capturedAt)}</p>
+    </div>
+  );
+}
+
 export default function FlowerMap({ records }: FlowerMapProps) {
   return (
     <MapContainer
@@ -50,14 +76,10 @@ export default function FlowerMap({ records }: FlowerMapProps) {
         <Marker
           key={record.id}
           position={[record.location!.latitude, record.location!.longitude]}
+          icon={pinIcon}
         >
           <Popup>
-            <div className="text-center">
-              <p className="font-bold text-base">{record.flowerName}</p>
-              <p className="text-xs text-gray-500">
-                {formatDate(record.capturedAt)}
-              </p>
-            </div>
+            <FlowerPopup record={record} />
           </Popup>
         </Marker>
       ))}

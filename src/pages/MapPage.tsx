@@ -3,23 +3,24 @@ import FlowerMap from "../components/map/FlowerMap";
 import Loading from "../components/common/Loading";
 import { useRecords } from "../hooks/useRecords";
 
-const MONTHS = [
-  "ぜんぶ",
-  "1がつ", "2がつ", "3がつ", "4がつ", "5がつ", "6がつ",
-  "7がつ", "8がつ", "9がつ", "10がつ", "11がつ", "12がつ",
-];
-
 export default function MapPage() {
   const { records, isLoading } = useRecords();
-  const [selectedMonth, setSelectedMonth] = useState(0);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+
+  const withLocation = useMemo(
+    () => records.filter((r) => r.location !== null && r.location !== undefined),
+    [records]
+  );
+
+  const years = useMemo(() => {
+    const set = new Set(withLocation.map((r) => r.capturedAt.getFullYear()));
+    return Array.from(set).sort((a, b) => b - a);
+  }, [withLocation]);
 
   const filteredRecords = useMemo(() => {
-    const withLocation = records.filter((r) => r.location !== null && r.location !== undefined);
-    if (selectedMonth === 0) return withLocation;
-    return withLocation.filter(
-      (r) => r.capturedAt.getMonth() + 1 === selectedMonth
-    );
-  }, [records, selectedMonth]);
+    if (selectedYear === null) return withLocation;
+    return withLocation.filter((r) => r.capturedAt.getFullYear() === selectedYear);
+  }, [withLocation, selectedYear]);
 
   if (isLoading) {
     return <Loading message="ちずを よみこんでいるよ..." />;
@@ -29,21 +30,33 @@ export default function MapPage() {
     <div className="flex flex-col h-[100dvh] pb-16 overflow-hidden">
       <div className="px-4 pt-4 pb-2">
         <h1 className="text-xl font-bold text-center mb-2">🗺️ おはな ちず</h1>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {MONTHS.map((label, i) => (
+        {years.length > 0 && (
+          <div className="flex gap-2 justify-center pb-1">
             <button
-              key={i}
-              onClick={() => setSelectedMonth(i)}
-              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold transition-colors ${
-                selectedMonth === i
+              onClick={() => setSelectedYear(null)}
+              className={`px-3 py-1 rounded-full text-xs font-bold ${
+                selectedYear === null
                   ? "bg-pink text-white"
                   : "bg-gray-100 text-gray-600"
               }`}
             >
-              {label}
+              ぜんぶ
             </button>
-          ))}
-        </div>
+            {years.map((y) => (
+              <button
+                key={y}
+                onClick={() => setSelectedYear(y)}
+                className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  selectedYear === y
+                    ? "bg-pink text-white"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {y}ねん
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 relative" style={{ minHeight: 0 }}>
