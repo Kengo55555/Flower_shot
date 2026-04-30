@@ -13,20 +13,20 @@ import { DAILY_USER_LIMIT } from "../constants";
 const BG_COLORS = [
   { label: "レモン", value: "#FFF44F" },
   { label: "クリーム", value: "#FFF8E7" },
-  { label: "さくら", value: "#FFE4E8" },
-  { label: "そら", value: "#E0F0FF" },
-  { label: "みどり", value: "#E8F5E9" },
+  { label: "桜", value: "#FFE4E8" },
+  { label: "空", value: "#E0F0FF" },
+  { label: "緑", value: "#E8F5E9" },
   { label: "ラベンダー", value: "#F3E5F5" },
-  { label: "しろ", value: "#FFFFFF" },
+  { label: "白", value: "#FFFFFF" },
 ];
 
 const BUTTON_COLORS = [
   { label: "ピンク", value: "#FF9CAD" },
-  { label: "あか", value: "#EF5350" },
+  { label: "赤", value: "#EF5350" },
   { label: "オレンジ", value: "#FFA726" },
-  { label: "みどり", value: "#66BB6A" },
-  { label: "あお", value: "#42A5F5" },
-  { label: "むらさき", value: "#AB47BC" },
+  { label: "緑", value: "#66BB6A" },
+  { label: "青", value: "#42A5F5" },
+  { label: "紫", value: "#AB47BC" },
 ];
 
 const EMOJIS = ["🌻", "🌸", "🌷", "🌹", "🌺", "💐", "🌼", "🏵️"];
@@ -66,18 +66,14 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col min-h-screen pb-20">
       <div className="px-4 pt-6 pb-4">
-        <h1 className="text-2xl font-bold text-center mb-6">⚙️ せってい</h1>
+        <h1 className="text-2xl font-bold text-center mb-6">⚙️ 設定</h1>
 
         {/* Account */}
         <section className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
           <h2 className="text-sm text-gray-500 mb-3">アカウント</h2>
           <div className="flex items-center gap-3">
             {user?.photoURL && (
-              <img
-                src={user.photoURL}
-                alt=""
-                className="w-12 h-12 rounded-full"
-              />
+              <img src={user.photoURL} alt="" className="w-12 h-12 rounded-full" />
             )}
             <div>
               <p className="font-bold">{user?.displayName}</p>
@@ -88,7 +84,7 @@ export default function SettingsPage() {
 
         {/* Theme - Background */}
         <section className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-          <h2 className="text-sm text-gray-500 mb-3">はいけいの いろ</h2>
+          <h2 className="text-sm text-gray-500 mb-3">背景色</h2>
           <div className="flex flex-wrap gap-2">
             {BG_COLORS.map((c) => (
               <button
@@ -106,7 +102,7 @@ export default function SettingsPage() {
 
         {/* Theme - Button */}
         <section className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-          <h2 className="text-sm text-gray-500 mb-3">ボタンの いろ</h2>
+          <h2 className="text-sm text-gray-500 mb-3">ボタンの色</h2>
           <div className="flex flex-wrap gap-2">
             {BUTTON_COLORS.map((c) => (
               <button
@@ -124,7 +120,7 @@ export default function SettingsPage() {
 
         {/* Theme - Emoji */}
         <section className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-          <h2 className="text-sm text-gray-500 mb-3">タイトルの おはな</h2>
+          <h2 className="text-sm text-gray-500 mb-3">タイトルの花アイコン</h2>
           <div className="flex flex-wrap gap-2">
             {EMOJIS.map((e) => (
               <button
@@ -142,9 +138,9 @@ export default function SettingsPage() {
 
         {/* Location */}
         <section className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-          <h2 className="text-sm text-gray-500 mb-3">いちじょうほう</h2>
+          <h2 className="text-sm text-gray-500 mb-3">位置情報</h2>
           <div className="flex items-center justify-between">
-            <span className="text-base">ばしょを きろくする（きほん）</span>
+            <span className="text-base">場所を記録する（既定）</span>
             <button
               onClick={handleLocationToggle}
               className={`w-14 h-8 rounded-full transition-colors ${
@@ -159,7 +155,7 @@ export default function SettingsPage() {
             </button>
           </div>
           <p className="text-xs text-gray-400 mt-2">
-            ONにすると おはなを みつけた ばしょを ちずに のこせるよ
+            ONにすると撮影場所を地図に記録できます
           </p>
         </section>
 
@@ -177,15 +173,15 @@ export default function SettingsPage() {
               : `${Math.round(storageBytes / 1024)}KB`;
             return (
               <div className="space-y-2 text-sm">
-                <p>📸 ほぞんずみ: {records.length}まい（{usageStr}）</p>
-                <p>📦 のこり: やく{remainPhotos}まい（{remainMB.toFixed(0)}MB）</p>
-                <p>🌸 きょうの はんてい: {userCount}かい / {DAILY_USER_LIMIT}かい</p>
+                <p>📸 保存済み: {records.length}枚（{usageStr}）</p>
+                <p>📦 残り: 約{remainPhotos}枚（{remainMB.toFixed(0)}MB）</p>
+                <p>🌸 本日の判定: {userCount}回 / {DAILY_USER_LIMIT}回</p>
                 <div className="bg-gray-50 rounded-lg p-3 mt-2 text-xs text-gray-500 space-y-1">
-                  <p className="font-bold text-gray-600">ほぞんの せいやくじこう</p>
-                  <p>・しゃしんは このスマホだけに ほぞんされます</p>
-                  <p>・さいだい やく{maxPhotos}まい ほぞんできます（やく1GB）</p>
-                  <p>・べつの スマホでは しゃしんは みられません</p>
-                  <p>・アプリを けすと しゃしんも きえます</p>
+                  <p className="font-bold text-gray-600">保存に関する制約事項</p>
+                  <p>・写真はこの端末内にのみ保存されます</p>
+                  <p>・最大 約{maxPhotos}枚まで保存可能（約1GB）</p>
+                  <p>・別の端末では写真を閲覧できません</p>
+                  <p>・アプリを削除すると写真も消去されます</p>
                 </div>
               </div>
             );
@@ -195,19 +191,19 @@ export default function SettingsPage() {
         {/* Admin */}
         {user?.email === ADMIN_EMAIL && (
           <section className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-            <h2 className="text-sm text-gray-500 mb-3">かんりしゃ</h2>
+            <h2 className="text-sm text-gray-500 mb-3">管理者</h2>
             <button
               onClick={() => navigate("/admin")}
               className="w-full bg-gray-800 text-white rounded-full py-3 font-bold text-sm"
             >
-              かんりしゃ がめん →
+              管理者画面 →
             </button>
           </section>
         )}
 
         {/* App Info */}
         <section className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-          <h2 className="text-sm text-gray-500 mb-3">アプリじょうほう</h2>
+          <h2 className="text-sm text-gray-500 mb-3">アプリ情報</h2>
           <p className="text-sm">Flower Shot v1.0.0</p>
         </section>
 
@@ -229,7 +225,7 @@ export default function SettingsPage() {
                 onClick={() => setShowLogoutConfirm(false)}
                 className="flex-1 bg-gray-200 rounded-full py-3 font-bold"
               >
-                やめる
+                キャンセル
               </button>
               <button
                 onClick={handleLogout}
