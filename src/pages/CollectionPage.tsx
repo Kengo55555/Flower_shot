@@ -37,7 +37,7 @@ export default function CollectionPage() {
           </p>
         )}
 
-        {years.length > 1 && (
+        {years.length > 0 && (
           <div className="flex gap-2 justify-center mt-3">
             <button
               onClick={() => setSelectedYear(null)}
