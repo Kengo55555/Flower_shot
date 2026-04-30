@@ -39,7 +39,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col h-[100dvh] pb-16 overflow-hidden">
       <div className="px-4 pt-6 pb-2">
-        <h1 className="text-2xl font-bold text-center mb-1">🌸 Flower Shot</h1>
+        <h1 className="text-2xl font-bold text-center mb-1">🌻 Flower Shot 🌻</h1>
         <p className="text-center text-sm text-gray-500 mb-4">
           おはなの なまえを しらべよう！
         </p>
