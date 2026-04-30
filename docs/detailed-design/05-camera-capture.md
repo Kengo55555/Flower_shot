@@ -6,105 +6,68 @@
 
 ## 概要
 
-iOS Safariのカメラを起動して花を撮影し、位置情報の取得有無を選択する。撮影データをResultPageに渡す。
+iOS Safariのカメラを起動して花を撮影する。撮影データを圧縮し、ResultPageに渡す。
+
+**v2.0変更点**: 位置情報の取得はCameraPageではなくResultPage（場所選択ステップ）で行うフローに変更。CameraPageは撮影・プレビュー・圧縮に専念する。
 
 ---
 
 ## 実装タスク
 
-### 5.1 CaptureContext（src/hooks/useCapture.ts または Context）
+### 5.1 CaptureContext（src/hooks/useCapture.tsx）
 
-- [ ] `CaptureContext` 作成
+- [x] `CaptureContext` 作成
   ```typescript
   interface CaptureState {
-    imageFile: File | null;          // 撮影画像
-    imagePreviewUrl: string | null;  // プレビュー用Object URL
-    location: GeoLocation | null;    // 位置情報（nullなら記録なし）
-    isLocationRecorded: boolean;     // 位置情報を記録したか
+    imageFile: File | null;
+    compressedBlob: Blob | null;
+    imagePreviewUrl: string | null;
+    location: GeoLocation | null;
+    isLocationRecorded: boolean;
   }
   ```
-- [ ] `setCaptureData()` / `clearCaptureData()` 関数を提供
-- [ ] `App.tsx` に `CaptureProvider` を追加
+- [x] `setCaptureData()` / `clearCaptureData()` 関数を提供
+- [x] `App.tsx` に `CaptureProvider` を追加
 
 ### 5.2 カメラ撮影画面（src/pages/CameraPage.tsx）
 
-- [ ] 画面レイアウト
-  - 上部: 「おはなを さつえいしよう！」のタイトル（RubyText）
-  - 中央: 撮影プレビューエリア（撮影前は花のイラストプレースホルダー）
-  - 中央下: 撮影ボタン（CaptureButton コンポーネント）
-  - 下部: 位置情報トグル
-- [ ] 撮影後のプレビュー表示
-  - 撮影した画像を大きくプレビュー
+- [x] 画面レイアウト
+  - 上部: Header「おはなを さつえいしよう！」（戻るボタン付き）
+  - 中央: 撮影プレビューエリア（撮影前は花イラスト + メッセージ）
+  - 中央下: 撮影ボタン（CaptureButton）
+- [x] 撮影後のプレビュー表示
+  - 「とりなおす」ボタン → CaptureContext クリア
   - 「この しゃしんで しらべる」ボタン → ResultPage へ遷移
-  - 「とりなおす」ボタン → プレビューをクリアして再撮影
 
 ### 5.3 撮影ボタン（src/components/camera/CaptureButton.tsx）
 
-- [ ] `<input type="file" accept="image/*" capture="environment">` を内包
-  - `input` は `display: none` にし、ボタンのクリックで `input.click()` を呼び出す
-- [ ] ボタンデザイン
-  - 丸型、直径80px以上
-  - カメラアイコン + 「さつえい」ラベル
-  - パステルピンク or グリーンの背景色
-  - タップ時に軽いスケールアニメーション
-- [ ] `onChange` で `File` オブジェクトを取得し、CaptureContext にセット
-- [ ] 画像の圧縮処理
-  - iOS の写真は大きいため、判定前に最大幅1024pxにリサイズ
-  - `canvas` を使った圧縮処理を `src/lib/image-utils.ts` に実装
-    ```typescript
-    export async function compressImage(file: File, maxWidth: number): Promise<Blob>
-    ```
+- [x] `<input type="file" accept="image/*" capture="environment">` を内包
+- [x] ボタンデザイン（丸型、大きなタップ領域）
+- [x] `onChange` で `File` オブジェクトを取得
 
-### 5.4 位置情報取得（src/lib/geolocation.ts）
+### 5.4 画像圧縮（src/lib/image-utils.ts）
 
-- [ ] `getCurrentLocation(): Promise<GeoLocation | null>` 関数を実装
-  ```typescript
-  export function getCurrentLocation(): Promise<GeoLocation | null> {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        resolve(null);
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        }),
-        () => resolve(null),  // 拒否・エラー時はnull
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-      );
-    });
-  }
-  ```
+- [x] `compressImage(file: File): Promise<Blob>` 関数を実装
+  - iOS の写真は大きいため、判定前にリサイズ
+  - `canvas` を使った圧縮処理
 
-### 5.5 位置情報ON/OFFトグル
+### 5.5 撮影フロー（2段階）
 
-- [ ] CameraPage に位置情報トグルを配置
-  - デフォルト値: `user.settings.locationDefaultOn` から取得
-  - ラベル: 「ばしょを きろくする」（RubyText）
-  - トグルスイッチUI（ON: 緑, OFF: グレー）
-- [ ] ONの場合: 撮影確定時に `getCurrentLocation()` を呼び出し
-- [ ] 位置情報の権限が拒否された場合: トグルをOFFに戻し、「ばしょの きろくが できなかったよ」と表示
+- [x] HomePageの撮影ボタン: ファイル選択 → 圧縮 → CaptureContext セット → CameraPage へ遷移
+- [x] CameraPage: プレビュー確認 → 「この しゃしんで しらべる」→ ResultPage へ遷移
+- [x] CameraPageでも再撮影（CaptureButton）可能
 
-### 5.6 CameraPage → ResultPage 遷移
+### 5.6 圏外時の処理
 
-- [ ] 「このしゃしんで しらべる」ボタンタップ時:
-  1. CaptureContext に `imageFile`, `location`, `isLocationRecorded` をセット
-  2. `navigate("/result")` で遷移
-- [ ] ResultPage で CaptureContext が空（直接アクセス等）の場合は `/` にリダイレクト
-
-### 5.7 圏外時の処理
-
-- [ ] `navigator.onLine` でネットワーク状態を確認
-- [ ] オフラインの場合: 「でんぱの あるところで もういちど ためしてね」メッセージを表示し、判定へ進まない
+- [x] `navigator.onLine` でネットワーク状態を確認
+- [x] オフラインの場合: 「でんぱの あるところで もういちど ためしてね」alert表示
 
 ---
 
 ## 完了条件
 
-- 撮影ボタンタップでiOS Safariのカメラが起動する
-- 撮影後にプレビューが表示される
-- 位置情報トグルのON/OFFが機能する
-- 位置情報の権限拒否時にエラーにならない
-- 撮影データがCaptureContext経由でResultPageに渡る
-- 圏外時に適切なメッセージが表示される
+- [x] 撮影ボタンタップでiOS Safariのカメラが起動する
+- [x] 撮影後にプレビューが表示される
+- [x] 画像が圧縮されてCaptureContextにセットされる
+- [x] 圏外時に適切なメッセージが表示される
+- [x] ResultPageへ正しく遷移する
