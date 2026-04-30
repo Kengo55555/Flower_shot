@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import FlowerCard from "../components/collection/FlowerCard";
 import Loading from "../components/common/Loading";
 import { useRecords } from "../hooks/useRecords";
+import { generateAlbumPdf } from "../lib/album";
 
 export default function CollectionPage() {
   const navigate = useNavigate();
   const { records, isLoading } = useRecords();
+  const [generating, setGenerating] = useState(false);
+  const [progress, setProgress] = useState("");
 
   const years = useMemo(() => {
     const set = new Set(records.map((r) => r.capturedAt.getFullYear()));
@@ -21,6 +24,28 @@ export default function CollectionPage() {
   }, [records, selectedYear]);
 
   const uniqueCount = new Set(filtered.map((r) => r.flowerNameOriginal)).size;
+
+  const handleExportAlbum = async () => {
+    setGenerating(true);
+    setProgress("じゅんびちゅう...");
+    try {
+      const blob = await generateAlbumPdf(records, selectedYear, (current, total) => {
+        setProgress(`${current} / ${total} まいめ...`);
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const label = selectedYear ? `FlowerShot_${selectedYear}` : "FlowerShot_All";
+      a.download = `${label}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("アルバムの さくせいに しっぱいしました");
+    } finally {
+      setGenerating(false);
+      setProgress("");
+    }
+  };
 
   if (isLoading) {
     return <Loading message="ずかんを よみこんでいるよ..." />;
@@ -63,6 +88,16 @@ export default function CollectionPage() {
               </button>
             ))}
           </div>
+        )}
+
+        {filtered.length > 0 && (
+          <button
+            onClick={handleExportAlbum}
+            disabled={generating}
+            className="w-full mt-3 bg-sky text-white rounded-full py-2 text-sm font-bold disabled:opacity-50"
+          >
+            {generating ? progress : `📕 アルバムを つくる（PDF）`}
+          </button>
         )}
       </div>
 
