@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #FFF8E7;
+  --color-pink: #FF9CAD;
+  --color-pink-light: #FFD1DC;
+  --color-green: #7BC67E;
+  --color-green-light: #C8E6C9;
+  --color-yellow: #FFE082;
+  --color-orange: #FFB74D;
+  --color-sky: #81D4FA;
+}
+
+body {
+  margin: 0;
+  background-color: #FFF8E7;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 18px;
+  color: #333;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes spin-flower {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-spin-flower {
+  animation: spin-flower 2s linear infinite;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s ease-out;
+}
+
+.animate-float {
+  animation: float 2s ease-in-out infinite;
+}
