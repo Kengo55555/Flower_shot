@@ -50,7 +50,9 @@ export default function FlowerCard({ record, onClick }: FlowerCardProps) {
         <p className="text-xs text-gray-500 mt-1">
           {formatDate(record.capturedAt)}
         </p>
-        {!record.isLocationRecorded && (
+        {record.location ? (
+          <p className="text-xs text-green mt-0.5">📍 ばしょあり</p>
+        ) : (
           <p className="text-xs text-gray-400 mt-0.5">ばしょなし</p>
         )}
       </div>

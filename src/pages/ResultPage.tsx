@@ -4,28 +4,38 @@ import Header from "../components/common/Header";
 import Loading from "../components/common/Loading";
 import ResultCard from "../components/result/ResultCard";
 import CandidateList from "../components/result/CandidateList";
+import LocationPicker from "../components/map/LocationPicker";
 import { useCapture } from "../hooks/useCapture";
 import { useAuth } from "../hooks/useAuth";
 import { identifyFlower, parseIdentifyResult, type IdentifyResult } from "../lib/plantnet";
 import { checkCanUse, incrementUsage } from "../lib/usage-limit";
+import { getCurrentLocation } from "../lib/geolocation";
 import { saveRecord } from "../lib/firestore";
 import { saveImage } from "../lib/indexeddb";
+import type { GeoLocation } from "../types";
+
+type Step = "identifying" | "result" | "location" | "saving" | "done";
 
 export default function ResultPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { compressedBlob, imagePreviewUrl, location, isLocationRecorded, clearCaptureData } =
-    useCapture();
+  const { compressedBlob, imagePreviewUrl, clearCaptureData } = useCapture();
 
-  const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState<Step>("identifying");
   const [result, setResult] = useState<IdentifyResult | null>(null);
   const [error, setError] = useState("");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
   const [limitMessage, setLimitMessage] = useState("");
 
+  // 場所関連
+  const [pickedLocation, setPickedLocation] = useState<GeoLocation | null>(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [gettingGps, setGettingGps] = useState(false);
+
+  // 保存関連
+  const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
+
+  // 花の判定
   useEffect(() => {
     if (!compressedBlob || !user) {
       navigate("/", { replace: true });
@@ -42,7 +52,7 @@ export default function ResultPage() {
               ? "きょうは みんなが たくさん あそんでくれたよ！あしたまた あそぼうね"
               : "きょうの おはなさがしは おしまい！あしたまた あそぼうね"
           );
-          setLoading(false);
+          setStep("result");
           return;
         }
 
@@ -50,23 +60,40 @@ export default function ResultPage() {
         if (cancelled) return;
         const parsed = parseIdentifyResult(response);
         setResult(parsed);
-
         await incrementUsage(user.uid);
+        setStep("result");
       } catch {
         if (!cancelled) {
           setError("うまく しらべられなかったよ。もういちど ためしてね");
+          setStep("result");
         }
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [compressedBlob, user, navigate]);
 
-  const handleSave = async () => {
+  const canProceedToLocation =
+    result?.status === "found" ||
+    (result?.status === "candidates" && selectedIndex !== null);
+
+  const handleGoToLocation = () => {
+    setStep("location");
+  };
+
+  const handleAutoGps = async () => {
+    setGettingGps(true);
+    const loc = await getCurrentLocation();
+    setGettingGps(false);
+    if (loc) {
+      setPickedLocation(loc);
+    } else {
+      alert("いちじょうほうが とれなかったよ。ちずから えらんでね");
+      setShowMapPicker(true);
+    }
+  };
+
+  const handleSave = async (withLocation: boolean) => {
     if (!user || !compressedBlob) return;
 
     const flowerName =
@@ -82,9 +109,10 @@ export default function ResultPage() {
         ? result.topResult!.confidence
         : result?.candidates[selectedIndex!]?.confidence || 0;
 
-    setSaving(true);
+    const location = withLocation ? pickedLocation : null;
+
+    setStep("saving");
     try {
-      // まずIDを生成してから保存（photoLocalKeyを最初からセット）
       const { doc: createDoc, collection: getCollection } = await import("firebase/firestore");
       const { db } = await import("../lib/firebase");
       const newDocRef = createDoc(getCollection(db, "records"));
@@ -98,33 +126,31 @@ export default function ResultPage() {
         candidates: result?.candidates || [],
         confidence,
         capturedAt: new Date(),
-        location: location || null,
-        isLocationRecorded,
+        location,
+        isLocationRecorded: withLocation && location !== null,
       }, recordId);
 
       await saveImage(recordId, compressedBlob);
 
       setSavedRecordId(recordId);
-      setSaved(true);
+      setStep("done");
       clearCaptureData();
     } catch {
       setError("ほぞんできなかったよ。もういちど ためしてね");
-    } finally {
-      setSaving(false);
+      setStep("result");
     }
   };
-
-  const canSave =
-    result?.status === "found" ||
-    (result?.status === "candidates" && selectedIndex !== null);
 
   return (
     <div className="flex flex-col min-h-screen pb-20">
       <Header title="けっか" onBack={() => navigate("/")} />
 
       <div className="flex-1 px-4 py-6">
-        {loading && <Loading />}
 
+        {/* ステップ1: 判定中 */}
+        {step === "identifying" && <Loading />}
+
+        {/* 利用制限 */}
         {limitMessage && (
           <div className="text-center py-16">
             <p className="text-5xl mb-4">😴</p>
@@ -138,6 +164,7 @@ export default function ResultPage() {
           </div>
         )}
 
+        {/* エラー */}
         {error && (
           <div className="text-center py-16">
             <p className="text-5xl mb-4">😢</p>
@@ -151,14 +178,13 @@ export default function ResultPage() {
           </div>
         )}
 
-        {!loading && !error && !limitMessage && result && (
+        {/* ステップ2: 判定結果 */}
+        {step === "result" && !error && !limitMessage && result && (
           <>
             {result.status === "not_found" && (
               <div className="text-center py-16">
                 <p className="text-5xl mb-4">🔍</p>
-                <p className="text-lg font-bold">
-                  おはなが みつからなかったよ
-                </p>
+                <p className="text-lg font-bold">おはなが みつからなかったよ</p>
                 <button
                   onClick={() => navigate("/camera")}
                   className="mt-6 bg-pink text-white rounded-full px-8 py-3 font-bold"
@@ -186,39 +212,100 @@ export default function ResultPage() {
               />
             )}
 
-            {!saved && canSave && (
+            {canProceedToLocation && (
               <button
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full mt-6 bg-green text-white rounded-full py-4 font-bold text-lg disabled:opacity-50"
+                onClick={handleGoToLocation}
+                className="w-full mt-6 bg-green text-white rounded-full py-4 font-bold text-lg"
               >
-                {saving ? "ほぞんしているよ..." : "ほぞんする"}
+                つぎへ → ばしょを きろくする
               </button>
-            )}
-
-            {saved && (
-              <div className="mt-6 text-center animate-bounce-in">
-                <p className="text-5xl mb-2">✅</p>
-                <p className="text-lg font-bold mb-4">ほぞんできたよ！</p>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => navigate(`/detail/${savedRecordId}`)}
-                    className="w-full bg-sky text-white rounded-full py-3 font-bold"
-                  >
-                    もっと くわしく
-                  </button>
-                  <button
-                    onClick={() => navigate("/")}
-                    className="w-full bg-gray-200 rounded-full py-3 font-bold"
-                  >
-                    ホームに もどる
-                  </button>
-                </div>
-              </div>
             )}
           </>
         )}
+
+        {/* ステップ3: 場所選択 */}
+        {step === "location" && (
+          <div>
+            <p className="text-xl font-bold text-center mb-4">
+              📍 ばしょを きろくする？
+            </p>
+
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={handleAutoGps}
+                disabled={gettingGps}
+                className="flex-1 bg-white rounded-xl p-4 text-sm font-bold text-center shadow-sm active:scale-95 disabled:opacity-50"
+              >
+                {gettingGps ? "とっているよ..." : "📍 いまの ばしょ"}
+              </button>
+              <button
+                onClick={() => setShowMapPicker(true)}
+                className="flex-1 bg-white rounded-xl p-4 text-sm font-bold text-center shadow-sm active:scale-95"
+              >
+                🗺️ ちずで えらぶ
+              </button>
+            </div>
+
+            {pickedLocation && (
+              <p className="text-sm text-green text-center mb-4">
+                ✅ ばしょを せっていしたよ
+              </p>
+            )}
+
+            <div className="space-y-3">
+              <button
+                onClick={() => handleSave(true)}
+                disabled={!pickedLocation}
+                className="w-full bg-green text-white rounded-full py-4 font-bold text-lg disabled:opacity-30"
+              >
+                ばしょつきで ほぞんする
+              </button>
+              <button
+                onClick={() => handleSave(false)}
+                className="w-full bg-gray-200 rounded-full py-3 font-bold text-base"
+              >
+                ばしょなしで ほぞんする
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ステップ4: 保存中 */}
+        {step === "saving" && <Loading message="ほぞんしているよ..." />}
+
+        {/* ステップ5: 完了 */}
+        {step === "done" && (
+          <div className="text-center animate-bounce-in">
+            <p className="text-5xl mb-2">✅</p>
+            <p className="text-lg font-bold mb-4">ほぞんできたよ！</p>
+            <div className="space-y-3">
+              <button
+                onClick={() => navigate(`/detail/${savedRecordId}`)}
+                className="w-full bg-sky text-white rounded-full py-3 font-bold"
+              >
+                もっと くわしく
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="w-full bg-gray-200 rounded-full py-3 font-bold"
+              >
+                ホームに もどる
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {showMapPicker && (
+        <LocationPicker
+          initialLocation={pickedLocation}
+          onSelect={(loc) => {
+            setPickedLocation(loc);
+            setShowMapPicker(false);
+          }}
+          onClose={() => setShowMapPicker(false)}
+        />
+      )}
     </div>
   );
 }

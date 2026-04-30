@@ -33,8 +33,8 @@ function docToRecord(id: string, data: Record<string, unknown>): FlowerRecord {
     candidates: (data.candidates as FlowerRecord["candidates"]) || [],
     confidence: data.confidence as number,
     capturedAt: toDate(data.capturedAt),
-    location: data.location as FlowerRecord["location"],
-    isLocationRecorded: data.isLocationRecorded as boolean,
+    location: (data.location as FlowerRecord["location"]) || null,
+    isLocationRecorded: !!(data.isLocationRecorded || data.location),
   };
 }
 
