@@ -26,6 +26,7 @@ export interface FlowerRecord {
 
 export interface Candidate {
   name: string;
+  nameOriginal: string;
   confidence: number;
 }
 

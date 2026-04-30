@@ -33,21 +33,19 @@ function extractJapaneseName(result: PlantNetResult): string {
 export async function identifyFlower(
   imageFile: File | Blob
 ): Promise<PlantNetResponse> {
-  const formData = new FormData();
-  formData.append("images", imageFile);
-  formData.append("organs", "flower");
-
   const apiKey = import.meta.env.VITE_PLANTNET_API_KEY;
-  const res = await fetch(
-    `https://my-api.plantnet.org/v2/identify/all?api-key=${apiKey}&lang=ja`,
-    { method: "POST", body: formData }
-  );
 
-  if (res.status === 404) {
-    return { results: [] };
-  }
+  // 全環境で同一ドメインの /api/plantnet を使用
+  const formData = new FormData();
+  formData.append("images", imageFile, "photo.jpg");
+  formData.append("organs", "flower");
+  const url = `/api/plantnet/v2/identify/all?include-related-images=false&no-reject=false&nb-results=5&lang=ja&type=kt&api-key=${apiKey}`;
+  const res = await fetch(url, { method: "POST", body: formData });
+
+  if (res.status === 404) return { results: [] };
   if (!res.ok) {
-    throw new Error(`PlantNet API error: ${res.status}`);
+    const text = await res.text();
+    throw new Error(`PlantNet API error: ${res.status} - ${text}`);
   }
   return res.json();
 }
@@ -76,6 +74,7 @@ export function parseIdentifyResult(
     .slice(0, MAX_CANDIDATES)
     .map((r) => ({
       name: extractJapaneseName(r),
+      nameOriginal: r.species.scientificNameWithoutAuthor,
       confidence: r.score,
     }));
 

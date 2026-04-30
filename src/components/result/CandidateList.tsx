@@ -34,8 +34,11 @@ export default function CandidateList({
                 : "bg-white border-2 border-gray-200"
             }`}
           >
-            <span className="text-lg font-bold">{c.name}</span>
-            <span className="text-sm text-gray-600">
+            <div>
+              <span className="text-lg font-bold block">{c.name}</span>
+              <span className="text-xs text-gray-400 italic">{c.nameOriginal}</span>
+            </div>
+            <span className="text-sm text-gray-600 flex-shrink-0">
               {Math.round(c.confidence * 100)}%
             </span>
           </button>

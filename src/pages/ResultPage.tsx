@@ -98,7 +98,6 @@ export default function ResultPage() {
 
       await saveImage(recordId, compressedBlob);
 
-      // Update photoLocalKey to match the recordId
       const { updateDoc, doc } = await import("firebase/firestore");
       const { db } = await import("../lib/firebase");
       await updateDoc(doc(db, "records", recordId), {
@@ -172,6 +171,7 @@ export default function ResultPage() {
             {result.status === "found" && imagePreviewUrl && (
               <ResultCard
                 flowerName={result.topResult!.name}
+                flowerNameOriginal={result.topResult!.nameOriginal}
                 confidence={result.topResult!.confidence}
                 imageUrl={imagePreviewUrl}
               />
