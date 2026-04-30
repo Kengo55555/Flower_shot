@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   deleteDoc,
+  setDoc,
   doc,
   query,
   where,
@@ -38,8 +39,17 @@ function docToRecord(id: string, data: Record<string, unknown>): FlowerRecord {
 }
 
 export async function saveRecord(
-  record: Omit<FlowerRecord, "id">
+  record: Omit<FlowerRecord, "id">,
+  recordId?: string
 ): Promise<string> {
+  if (recordId) {
+    const docRef = doc(db, "records", recordId);
+    await setDoc(docRef, {
+      ...record,
+      capturedAt: serverTimestamp(),
+    });
+    return recordId;
+  }
   const docRef = await addDoc(collection(db, "records"), {
     ...record,
     capturedAt: serverTimestamp(),

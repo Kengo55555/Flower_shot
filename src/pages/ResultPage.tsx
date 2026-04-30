@@ -84,9 +84,15 @@ export default function ResultPage() {
 
     setSaving(true);
     try {
-      const recordId = await saveRecord({
+      // まずIDを生成してから保存（photoLocalKeyを最初からセット）
+      const { doc: createDoc, collection: getCollection } = await import("firebase/firestore");
+      const { db } = await import("../lib/firebase");
+      const newDocRef = createDoc(getCollection(db, "records"));
+      const recordId = newDocRef.id;
+
+      await saveRecord({
         userId: user.uid,
-        photoLocalKey: "",
+        photoLocalKey: recordId,
         flowerName,
         flowerNameOriginal,
         candidates: result?.candidates || [],
@@ -94,15 +100,9 @@ export default function ResultPage() {
         capturedAt: new Date(),
         location: location || null,
         isLocationRecorded,
-      });
+      }, recordId);
 
       await saveImage(recordId, compressedBlob);
-
-      const { updateDoc, doc } = await import("firebase/firestore");
-      const { db } = await import("../lib/firebase");
-      await updateDoc(doc(db, "records", recordId), {
-        photoLocalKey: recordId,
-      });
 
       setSavedRecordId(recordId);
       setSaved(true);

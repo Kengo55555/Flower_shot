@@ -32,19 +32,19 @@ export default function CameraPage() {
       return;
     }
 
+    let loc = null;
+    let recorded = false;
+
     if (locationOn) {
       setGettingLocation(true);
-      const loc = await getCurrentLocation();
+      loc = await getCurrentLocation();
       setGettingLocation(false);
-      if (loc) {
-        setCaptureData({ location: loc, isLocationRecorded: true });
-      } else {
-        setCaptureData({ location: null, isLocationRecorded: false });
-      }
-    } else {
-      setCaptureData({ location: null, isLocationRecorded: false });
+      recorded = loc !== null;
     }
-    navigate("/result");
+
+    setCaptureData({ location: loc, isLocationRecorded: recorded });
+    // stateが反映されるのを待ってから遷移
+    setTimeout(() => navigate("/result"), 50);
   };
 
   const handleRetake = () => {
