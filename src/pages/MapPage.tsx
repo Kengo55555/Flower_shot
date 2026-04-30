@@ -11,10 +11,10 @@ const MONTHS = [
 
 export default function MapPage() {
   const { records, isLoading } = useRecords();
-  const [selectedMonth, setSelectedMonth] = useState(0); // 0 = all
+  const [selectedMonth, setSelectedMonth] = useState(0);
 
   const filteredRecords = useMemo(() => {
-    const withLocation = records.filter((r) => r.isLocationRecorded && r.location);
+    const withLocation = records.filter((r) => r.location !== null && r.location !== undefined);
     if (selectedMonth === 0) return withLocation;
     return withLocation.filter(
       (r) => r.capturedAt.getMonth() + 1 === selectedMonth
@@ -26,15 +26,15 @@ export default function MapPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen pb-20">
-      <div className="px-4 pt-6 pb-3">
-        <h1 className="text-2xl font-bold text-center mb-3">🗺️ おはな ちず</h1>
-        <div className="flex gap-2 overflow-x-auto pb-2">
+    <div className="flex flex-col h-[100dvh] pb-16 overflow-hidden">
+      <div className="px-4 pt-4 pb-2">
+        <h1 className="text-xl font-bold text-center mb-2">🗺️ おはな ちず</h1>
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {MONTHS.map((label, i) => (
             <button
               key={i}
               onClick={() => setSelectedMonth(i)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-bold transition-colors ${
+              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold transition-colors ${
                 selectedMonth === i
                   ? "bg-pink text-white"
                   : "bg-gray-100 text-gray-600"
@@ -46,7 +46,7 @@ export default function MapPage() {
         </div>
       </div>
 
-      <div className="flex-1 relative" style={{ minHeight: "400px" }}>
+      <div className="flex-1 relative" style={{ minHeight: 0 }}>
         {filteredRecords.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
             <p className="text-gray-500 text-center">
@@ -54,7 +54,9 @@ export default function MapPage() {
             </p>
           </div>
         ) : (
-          <FlowerMap records={filteredRecords} />
+          <div className="absolute inset-0">
+            <FlowerMap records={filteredRecords} />
+          </div>
         )}
       </div>
     </div>
