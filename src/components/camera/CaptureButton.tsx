@@ -33,14 +33,14 @@ export default function CaptureButton({ onCapture, disabled }: CaptureButtonProp
       <button
         onClick={handleClick}
         disabled={disabled}
-        className={`w-24 h-24 rounded-full flex flex-col items-center justify-center text-white text-lg font-bold shadow-lg transition-transform active:scale-95 ${
+        className={`w-32 h-32 rounded-full flex flex-col items-center justify-center text-white text-lg font-bold shadow-lg transition-transform active:scale-95 ${
           disabled
             ? "bg-gray-300 cursor-not-allowed"
             : "bg-pink hover:bg-pink-light"
         }`}
       >
-        <span className="text-3xl">📷</span>
-        <span className="text-xs mt-1">さつえい</span>
+        <span className="text-4xl">📷</span>
+        <span className="text-sm mt-1">さつえい</span>
       </button>
     </>
   );

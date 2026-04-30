@@ -70,7 +70,7 @@ export default function HomePage() {
         )}
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center">
+      <div className="flex-1 flex flex-col items-center justify-center -mt-8">
         <CaptureButton onCapture={handleCapture} disabled={!canUse} />
         {canUse && (
           <p className="text-sm text-gray-400 mt-3">

@@ -1,7 +1,7 @@
 import type { Badge } from "../types";
 
 export const ADMIN_EMAIL = "nomurakengo@gmail.com";
-export const DAILY_USER_LIMIT = 30;
+export const DAILY_USER_LIMIT = 100;
 export const DAILY_GLOBAL_LIMIT = 500;
 export const PLANTNET_CONFIDENCE_THRESHOLD = 0.5;
 export const MAX_CANDIDATES = 3;
