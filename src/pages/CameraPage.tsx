@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/common/Header";
 import CaptureButton from "../components/camera/CaptureButton";
+import LocationPicker from "../components/map/LocationPicker";
 import { useCapture } from "../hooks/useCapture";
 import { useAuth } from "../hooks/useAuth";
 import { getCurrentLocation } from "../lib/geolocation";
 import { compressImage } from "../lib/image-utils";
+import type { GeoLocation } from "../types";
 
 export default function CameraPage() {
   const navigate = useNavigate();
@@ -14,6 +16,8 @@ export default function CameraPage() {
   const [locationOn, setLocationOn] = useState(
     user?.settings.locationDefaultOn ?? true
   );
+  const [pickedLocation, setPickedLocation] = useState<GeoLocation | null>(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
 
   const handleCapture = async (file: File) => {
@@ -26,28 +30,43 @@ export default function CameraPage() {
     });
   };
 
+  const handleAutoLocation = async () => {
+    setGettingLocation(true);
+    const loc = await getCurrentLocation();
+    setGettingLocation(false);
+    if (loc) {
+      setPickedLocation(loc);
+    } else {
+      alert("いちじょうほうが とれなかったよ。ちずから えらんでね");
+      setShowMapPicker(true);
+    }
+  };
+
   const handleProceed = async () => {
     if (!navigator.onLine) {
       alert("でんぱの あるところで もういちど ためしてね");
       return;
     }
 
-    let loc = null;
-    let recorded = false;
-
-    if (locationOn) {
+    if (locationOn && !pickedLocation) {
       setGettingLocation(true);
-      loc = await getCurrentLocation();
+      const loc = await getCurrentLocation();
       setGettingLocation(false);
-      recorded = loc !== null;
+      if (loc) {
+        setCaptureData({ location: loc, isLocationRecorded: true });
+      } else {
+        setCaptureData({ location: null, isLocationRecorded: false });
+      }
+    } else if (locationOn && pickedLocation) {
+      setCaptureData({ location: pickedLocation, isLocationRecorded: true });
+    } else {
+      setCaptureData({ location: null, isLocationRecorded: false });
     }
-
-    setCaptureData({ location: loc, isLocationRecorded: recorded });
-    // stateが反映されるのを待ってから遷移
     setTimeout(() => navigate("/result"), 50);
   };
 
   const handleRetake = () => {
+    setPickedLocation(null);
     clearCaptureData();
   };
 
@@ -64,7 +83,8 @@ export default function CameraPage() {
               className="w-full h-64 object-cover rounded-2xl mb-4"
             />
 
-            <div className="flex items-center justify-between bg-white rounded-xl p-4 mb-4">
+            {/* 位置情報ON/OFF */}
+            <div className="flex items-center justify-between bg-white rounded-xl p-4 mb-3">
               <span className="text-base">ばしょを きろくする</span>
               <button
                 onClick={() => setLocationOn(!locationOn)}
@@ -80,6 +100,32 @@ export default function CameraPage() {
               </button>
             </div>
 
+            {/* 位置情報選択ボタン */}
+            {locationOn && (
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={handleAutoLocation}
+                  disabled={gettingLocation}
+                  className="flex-1 bg-white rounded-xl p-3 text-sm font-bold text-center shadow-sm active:scale-95 disabled:opacity-50"
+                >
+                  {gettingLocation ? "とっているよ..." : pickedLocation ? "📍 GPS で とりなおす" : "📍 いまの ばしょ"}
+                </button>
+                <button
+                  onClick={() => setShowMapPicker(true)}
+                  className="flex-1 bg-white rounded-xl p-3 text-sm font-bold text-center shadow-sm active:scale-95"
+                >
+                  🗺️ ちずで えらぶ
+                </button>
+              </div>
+            )}
+
+            {/* 選択済み位置情報の表示 */}
+            {locationOn && pickedLocation && (
+              <p className="text-xs text-green text-center mb-3">
+                ✅ ばしょを せっていしたよ
+              </p>
+            )}
+
             <div className="flex gap-3">
               <button
                 onClick={handleRetake}
@@ -92,7 +138,7 @@ export default function CameraPage() {
                 disabled={gettingLocation}
                 className="flex-1 bg-pink text-white rounded-full py-3 font-bold text-base disabled:opacity-50"
               >
-                {gettingLocation ? "ばしょを とっているよ..." : "この しゃしんで しらべる"}
+                この しゃしんで しらべる
               </button>
             </div>
           </div>
@@ -104,6 +150,17 @@ export default function CameraPage() {
           </div>
         )}
       </div>
+
+      {showMapPicker && (
+        <LocationPicker
+          initialLocation={pickedLocation}
+          onSelect={(loc) => {
+            setPickedLocation(loc);
+            setShowMapPicker(false);
+          }}
+          onClose={() => setShowMapPicker(false)}
+        />
+      )}
     </div>
   );
 }
