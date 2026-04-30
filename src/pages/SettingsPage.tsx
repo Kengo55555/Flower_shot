@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useUsageLimit } from "../hooks/useUsageLimit";
 import { useRecords } from "../hooks/useRecords";
 import { useTheme } from "../hooks/useTheme";
+import { ADMIN_EMAIL } from "../constants";
 import { signOutUser } from "../lib/auth";
 import { updateUserSettings } from "../lib/firestore";
 import { getStorageEstimate } from "../lib/indexeddb";
@@ -190,6 +191,19 @@ export default function SettingsPage() {
             );
           })()}
         </section>
+
+        {/* Admin */}
+        {user?.email === ADMIN_EMAIL && (
+          <section className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+            <h2 className="text-sm text-gray-500 mb-3">かんりしゃ</h2>
+            <button
+              onClick={() => navigate("/admin")}
+              className="w-full bg-gray-800 text-white rounded-full py-3 font-bold text-sm"
+            >
+              かんりしゃ がめん →
+            </button>
+          </section>
+        )}
 
         {/* App Info */}
         <section className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
