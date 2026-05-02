@@ -21,7 +21,7 @@ export default function MonthlySummary({ records }: SummaryProps) {
         <div className="border-l border-gray-200" />
         <div>
           <p className="text-3xl font-bold text-green">{records.length}</p>
-          <p className="text-xs text-gray-600 mt-1">かい さつえい</p>
+          <p className="text-xs text-gray-600 mt-1">まい</p>
         </div>
         <div className="border-l border-gray-200" />
         <div>
