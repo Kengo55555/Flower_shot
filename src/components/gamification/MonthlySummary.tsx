@@ -27,13 +27,13 @@ export default function MonthlySummary({ records }: SummaryProps) {
         <div>
           <p className="text-3xl font-bold text-sky">{prefectures.length}</p>
           <p className="text-xs text-gray-600 mt-1">とどうふけん</p>
+          {prefectures.length > 0 && (
+            <p className="text-[9px] text-gray-400 mt-1 leading-tight">
+              {prefectures.join("・")}
+            </p>
+          )}
         </div>
       </div>
-      {prefectures.length > 0 && (
-        <p className="text-[10px] text-gray-400 text-center mt-2">
-          {prefectures.join("・")}
-        </p>
-      )}
     </div>
   );
 }
