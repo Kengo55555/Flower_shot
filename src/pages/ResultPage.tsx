@@ -58,7 +58,7 @@ export default function ResultPage() {
 
         const response = await identifyFlower(compressedBlob);
         if (cancelled) return;
-        const parsed = parseIdentifyResult(response);
+        const parsed = await parseIdentifyResult(response);
         setResult(parsed);
         await incrementUsage(user.uid);
         setStep("result");
