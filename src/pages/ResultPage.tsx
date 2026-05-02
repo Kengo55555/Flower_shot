@@ -79,9 +79,21 @@ export default function ResultPage() {
 
   const handleGoToLocation = () => {
     setStep("location");
+    // 場所選択ステップに入ったら自動でGPS取得開始
+    autoGps();
   };
 
-  const handleAutoGps = async () => {
+  const autoGps = async () => {
+    setGettingGps(true);
+    const loc = await getCurrentLocation();
+    setGettingGps(false);
+    if (loc) {
+      setPickedLocation(loc);
+    }
+    // 失敗しても何も表示しない（手動ボタンがあるので）
+  };
+
+  const handleManualGps = async () => {
     setGettingGps(true);
     const loc = await getCurrentLocation();
     setGettingGps(false);
@@ -230,27 +242,40 @@ export default function ResultPage() {
               📍 ばしょを きろくする？
             </p>
 
+            {gettingGps && !pickedLocation && (
+              <div className="text-center py-4 mb-4">
+                <p className="text-base animate-float">📡</p>
+                <p className="text-sm text-gray-500 mt-2">いまの ばしょを とっているよ...</p>
+              </div>
+            )}
+
+            {pickedLocation && (
+              <div className="bg-green-light rounded-xl p-3 mb-4 text-center">
+                <p className="text-sm font-bold text-green">✅ ばしょを とれたよ！</p>
+              </div>
+            )}
+
+            {!gettingGps && !pickedLocation && (
+              <div className="bg-yellow rounded-xl p-3 mb-4 text-center">
+                <p className="text-sm">じどうで とれなかったよ。したの ボタンから えらんでね</p>
+              </div>
+            )}
+
             <div className="flex gap-2 mb-4">
               <button
-                onClick={handleAutoGps}
+                onClick={handleManualGps}
                 disabled={gettingGps}
-                className="flex-1 bg-white rounded-xl p-4 text-sm font-bold text-center shadow-sm active:scale-95 disabled:opacity-50"
+                className="flex-1 bg-white rounded-xl p-3 text-sm font-bold text-center shadow-sm active:scale-95 disabled:opacity-50"
               >
-                {gettingGps ? "とっているよ..." : "📍 いまの ばしょ"}
+                📍 もういちど とる
               </button>
               <button
                 onClick={() => setShowMapPicker(true)}
-                className="flex-1 bg-white rounded-xl p-4 text-sm font-bold text-center shadow-sm active:scale-95"
+                className="flex-1 bg-white rounded-xl p-3 text-sm font-bold text-center shadow-sm active:scale-95"
               >
                 🗺️ ちずで えらぶ
               </button>
             </div>
-
-            {pickedLocation && (
-              <p className="text-sm text-green text-center mb-4">
-                ✅ ばしょを せっていしたよ
-              </p>
-            )}
 
             <div className="space-y-3">
               <button
