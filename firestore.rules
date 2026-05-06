@@ -2,40 +2,86 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ============================
     // ユーザー情報
+    // ============================
     match /users/{uid} {
       allow read: if request.auth.uid == uid
                   || request.auth.token.email == "nomurakengo@gmail.com";
-      allow create: if request.auth.uid == uid;
-      allow update: if request.auth.uid == uid
+
+      // 新規作成: 自分のUIDのみ、必須フィールドを検証
+      allow create: if request.auth.uid == uid
+                    && request.resource.data.keys().hasAll(["email", "displayName", "firstLoginAt", "lastLoginAt", "reviewedByAdmin", "settings"])
+                    && request.resource.data.reviewedByAdmin == false;
+
+      // 更新: 自分は settings と lastLoginAt のみ変更可能
+      // 管理者は reviewedByAdmin も変更可能
+      allow update: if (request.auth.uid == uid
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["settings", "lastLoginAt"]))
                     || request.auth.token.email == "nomurakengo@gmail.com";
     }
 
-    // ブロックリスト
+    // ============================
+    // ブロックリスト（管理者のみ）
+    // ============================
     match /blocked_users/{email} {
       allow read: if request.auth.token.email == email
                   || request.auth.token.email == "nomurakengo@gmail.com";
       allow write: if request.auth.token.email == "nomurakengo@gmail.com";
     }
 
+    // ============================
     // 撮影記録
+    // ============================
     match /records/{recordId} {
       allow read: if request.auth.uid == resource.data.userId
                   || request.auth.token.email == "nomurakengo@gmail.com";
-      allow create: if request.auth.uid == request.resource.data.userId;
-      allow update, delete: if request.auth.uid == resource.data.userId;
+
+      // 新規作成: 自分のUIDが一致し、必須フィールドあり、信頼度の範囲チェック
+      allow create: if request.auth.uid == request.resource.data.userId
+                    && request.resource.data.keys().hasAll(["userId", "photoLocalKey", "flowerName", "confidence", "capturedAt"])
+                    && request.resource.data.confidence is number
+                    && request.resource.data.confidence >= 0
+                    && request.resource.data.confidence <= 1;
+
+      // 更新: 自分の記録のみ、photoLocalKeyのみ変更可能
+      allow update: if request.auth.uid == resource.data.userId
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["photoLocalKey"]);
+
+      // 削除: 自分の記録のみ
+      allow delete: if request.auth.uid == resource.data.userId;
     }
 
+    // ============================
     // API利用回数
+    // ============================
     match /apiUsage/{docId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+
+      // 新規作成: 自分のユーザーIDを含むドキュメント or globalのみ
+      allow create: if request.auth != null
+                    && (docId.matches("user_" + request.auth.uid + "_.*")
+                        || docId.matches("global_.*"));
+
+      // 更新: カウントのインクリメントのみ許可（countフィールドのみ変更可能）
+      allow update: if request.auth != null
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["count"])
+                    && (docId.matches("user_" + request.auth.uid + "_.*")
+                        || docId.matches("global_.*"));
     }
 
-    // 管理者操作ログ
+    // ============================
+    // 管理者操作ログ（管理者のみ）
+    // ============================
     match /admin_logs/{logId} {
       allow read, write: if request.auth.token.email == "nomurakengo@gmail.com";
+    }
+
+    // ============================
+    // それ以外のコレクションは全て拒否
+    // ============================
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
