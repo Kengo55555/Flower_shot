@@ -63,12 +63,11 @@ async function getJapaneseName(result: PlantNetResult): Promise<string> {
 export async function identifyFlower(
   imageFile: File | Blob
 ): Promise<PlantNetResponse> {
-  const apiKey = import.meta.env.VITE_PLANTNET_API_KEY;
-
   const formData = new FormData();
   formData.append("images", imageFile, "photo.jpg");
   formData.append("organs", "flower");
-  const url = `/api/plantnet/v2/identify/all?include-related-images=false&no-reject=false&nb-results=5&lang=ja&type=kt&api-key=${apiKey}`;
+  // APIキーはサーバー側（Cloudflare Pages Functions）で付与される
+  const url = `/api/plantnet/v2/identify/all?include-related-images=false&no-reject=false&nb-results=5&lang=ja&type=kt`;
   const res = await fetch(url, { method: "POST", body: formData });
 
   if (res.status === 404) return { results: [] };
