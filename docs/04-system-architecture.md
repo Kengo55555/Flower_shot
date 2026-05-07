@@ -1,6 +1,6 @@
 # Flower Shot システム構成図・DB構造・ER図・ユースケース図
 
-最終更新日: 2026-05-01
+最終更新日: 2026-05-07
 対象読者: 非エンジニア（保護者、先生、マネージャー等）
 
 > このドキュメントでは、Flower Shot アプリの全体像を図で説明します。
@@ -39,16 +39,16 @@ graph TD
 
     subgraph Cloudflare["Cloudflare Pages\n（アプリの配信サーバー）"]
         Static["アプリ本体の配信\n（HTML/CSS/JavaScript）"]
-        Proxy["APIプロキシ\n（/api/plantnet）\nAPIキーを安全に管理"]
+        Proxy["APIプロキシ（セキュリティ強化版）\n（/api/plantnet）\nAPIキーをサーバー側で管理\nOrigin制限・パス制限"]
     end
 
     subgraph Firebase["Firebase\n（Googleのクラウドサービス）"]
         Auth["Firebase Authentication\n（ログイン管理）"]
-        Firestore["Cloud Firestore\n（テキストデータの保管庫）"]
+        Firestore["Cloud Firestore\n（テキストデータの保管庫）\nusers / records / apiUsage\nblocked_users / allowed_emails\nadmin_logs"]
     end
 
     PlantNet["Pl@ntNet API\n（花の名前を判定するAI）"]
-    Wikipedia["Wikipedia API\n（花の詳しい情報）"]
+    Wikipedia["Wikipedia API\n（花の日本語名検索\n+ 詳しい情報）"]
     OSM["OpenStreetMap\n（地図データ）"]
 
     PWA -->|"アプリを開く"| Static
@@ -58,15 +58,15 @@ graph TD
     PWA -->|"テーマ設定を保存"| LS
 
     PWA -->|"ログイン"| Auth
-    PWA -->|"記録の読み書き"| Firestore
+    PWA -->|"記録の読み書き\nホワイトリスト確認"| Firestore
 
     PWA -->|"花の写真を送る"| Proxy
-    Proxy -->|"判定リクエストを転送"| PlantNet
+    Proxy -->|"判定リクエストを転送\n（APIキー付与）"| PlantNet
     PlantNet -->|"花の名前・信頼度を返す"| Proxy
     Proxy -->|"判定結果を返す"| PWA
 
-    PWA -->|"花の情報を取得"| Wikipedia
-    Wikipedia -->|"説明文・画像を返す"| PWA
+    PWA -->|"花の日本語名検索\n花の情報を取得"| Wikipedia
+    Wikipedia -->|"日本語名・説明文を返す"| PWA
 
     PWA -->|"地図を表示"| OSM
     OSM -->|"地図タイルを返す"| PWA
@@ -85,12 +85,13 @@ graph TD
 |------|------|
 | PWA | Progressive Web App の略。ブラウザで動くけど、ホーム画面に追加するとアプリのように使えるWebサイト |
 | Cloudflare Pages | アプリの本体（画面やプログラム）を配信するサーバー。世界中に分散しているので高速 |
-| APIプロキシ | アプリと外部サービスの間に入る「仲介役」。APIキー（パスワードのようなもの）を安全に管理する |
+| APIプロキシ | アプリと外部サービスの間に入る「仲介役」。APIキー（パスワードのようなもの）を安全に管理し、許可されたリクエストだけを通す |
 | Firebase Authentication | Google アカウントでのログインを管理するサービス |
-| Cloud Firestore | Google が提供するデータベース。花の名前、撮影日時などのテキスト情報を保存 |
+| Cloud Firestore | Google が提供するデータベース。花の名前、撮影日時などのテキスト情報を保存。許可メールアドレス（ホワイトリスト）もここに保存 |
 | IndexedDB | スマホの中にあるデータ保管庫。撮影した写真はここにだけ保存される |
 | localStorage | スマホの中にある小さなメモ帳。テーマの色設定などを保存 |
 | Pl@ntNet API | フランスの研究機関が提供する植物判定AI。写真を送ると花の名前を教えてくれる |
+| Wikipedia API | 花の日本語名を検索したり、花の詳しい情報を取得するために使用 |
 
 ---
 
@@ -103,22 +104,25 @@ graph TD
 flowchart LR
     Tutorial["チュートリアル\n（初回のみ）\nPWA追加の案内"]
     Login["ログイン画面\nGoogleアカウントで\nログイン"]
-    Home["ホーム画面\n月間サマリー\nバッジ・撮影ボタン"]
-    Camera["カメラ画面\n撮影・プレビュー"]
+    NotAllowed["招待制案内画面\nしょうたいせいです\nログアウトボタン"]
+    Home["ホーム画面\nサマリー（枚数・種類・都道府県）\nバッジ・撮影ボタン"]
+    Camera["カメラ画面\n撮影・プレビュー\n「しらべる」ボタン"]
     Result["結果画面\n判定・場所選択・保存"]
     Detail["詳細画面\nWikipedia情報"]
     Collection["図鑑画面\n花の一覧・PDF出力"]
     Map["地図画面\n花マップ・年フィルタ"]
     Settings["設定画面\nテーマ・ストレージ\nログアウト"]
-    Admin["管理者画面\nユーザー管理"]
+    Admin["管理者画面\n許可メール管理\nユーザー管理"]
     AdminUsers["ユーザー一覧"]
     AdminRecords["撮影記録一覧"]
 
     Tutorial -->|"次へ"| Login
-    Login -->|"ログイン成功"| Home
+    Login -->|"ログイン成功\nホワイトリストOK"| Home
+    Login -->|"ホワイトリスト\n未登録"| NotAllowed
+    NotAllowed -->|"ログアウト"| Login
 
     Home -->|"撮影ボタン"| Camera
-    Camera -->|"この写真で調べる"| Result
+    Camera -->|"しらべる"| Result
     Result -->|"もっとくわしく"| Detail
     Result -->|"ホームにもどる"| Home
 
@@ -138,6 +142,7 @@ flowchart LR
 
     style Tutorial fill:#E8EAF6,stroke:#283593
     style Login fill:#E8EAF6,stroke:#283593
+    style NotAllowed fill:#FFCDD2,stroke:#B71C1C
     style Home fill:#FFF9C4,stroke:#F9A825
     style Camera fill:#E8F5E9,stroke:#2E7D32
     style Result fill:#E8F5E9,stroke:#2E7D32
@@ -156,14 +161,15 @@ flowchart LR
 |--------|-----|-------------|------|
 | チュートリアル | `/tutorial` | 全員（初回のみ） | ホーム画面への追加方法を案内 |
 | ログイン | `/login` | 全員 | Google アカウントでログイン |
-| ホーム | `/` | 全員 | 今月の成果・バッジ・撮影ボタン |
-| カメラ | `/camera` | 全員 | 花を撮影してプレビュー |
-| 結果 | `/result` | 全員 | AI判定 → 場所選択 → 保存 |
+| 招待制案内 | (AuthGuard内) | ホワイトリスト未登録者 | 「しょうたいせいです」案内 + ログアウトボタン |
+| ホーム | `/` | 全員 | サマリー（枚数・種類・都道府県数）・バッジ・撮影ボタン |
+| カメラ | `/camera` | 全員 | 花を撮影してプレビュー、「しらべる」ボタン |
+| 結果 | `/result` | 全員 | AI判定 → 場所選択（設定依存） → 保存 |
 | 詳細 | `/detail/:id` | 全員 | Wikipedia から花の情報を表示 |
 | 図鑑 | `/collection` | 全員 | 撮影した花の一覧、PDFアルバム出力 |
 | 地図 | `/map` | 全員 | 撮影場所を地図上にピン表示 |
 | 設定 | `/settings` | 全員（漢字表記・大人向け） | テーマ変更・ストレージ確認・ログアウト |
-| 管理者ダッシュボード | `/admin` | 管理者のみ | ユーザー管理・API使用量 |
+| 管理者ダッシュボード | `/admin` | 管理者のみ | 許可メール管理・ユーザー管理・API使用量 |
 | ユーザー一覧 | `/admin/users` | 管理者のみ | 全ユーザーの情報 |
 | 撮影記録一覧 | `/admin/records` | 管理者のみ | 全撮影記録のテキスト情報 |
 
@@ -191,6 +197,7 @@ flowchart TD
         LimitOver["上限到達\n「きょうのおはなさがしは\nおしまい！」"]
         SendAPI["Pl@ntNet API に\n写真を送信"]
         Waiting["判定中...\nローディング表示"]
+        GetJpName["日本語名を取得\n（3段階フォールバック）\n1. PlantNet commonNames\n2. Wikipedia 学名検索\n3. Wikipedia 属名検索"]
         CheckResult{"判定結果は？"}
         Found["花が見つかった\n信頼度 50%以上\n→ 確定表示"]
         Candidates["候補が見つかった\n信頼度 50%未満\n→ 最大3件を表示"]
@@ -198,14 +205,13 @@ flowchart TD
         SelectCandidate["ユーザーが\n候補から1つ選択"]
     end
 
-    subgraph Step3["ステップ3: 場所選択"]
-        AskLocation["「ばしょを きろくする？」"]
-        LocationChoice{"場所の取得方法"}
-        AutoGPS["「いまの ばしょ」\nGPS で自動取得"]
-        MapPicker["「ちずで えらぶ」\n地図上でタップ"]
+    subgraph Step3["ステップ3: 場所選択（設定がONの場合のみ）"]
+        CheckLocSetting{"位置情報設定\nlocationDefaultOn"}
+        AutoGPS["GPS で自動取得"]
         GPSResult{"GPS取得\n成功？"}
-        LocationSet["場所を設定完了"]
-        SaveChoice{"保存方法を選択"}
+        GPSSuccess["「この ばしょで OK」\nor\n「ちずで えらぶ」"]
+        GPSFail["「ちずで えらぶ」\nor\n「ばしょなしで ほぞん」"]
+        MapPicker["地図上でタップ\nして場所を選択"]
     end
 
     subgraph Step4["ステップ4: 保存"]
@@ -227,34 +233,33 @@ flowchart TD
     Compress --> Preview
     Preview --> RetakeCheck
     RetakeCheck -->|"はい"| OpenCamera
-    RetakeCheck -->|"いいえ\nこの写真で調べる"| CheckLimit
+    RetakeCheck -->|"いいえ\n「しらべる」"| CheckLimit
 
     CheckLimit -->|"残り回数あり"| SendAPI
     CheckLimit -->|"上限到達"| LimitOver
     SendAPI --> Waiting
-    Waiting --> CheckResult
+    Waiting --> GetJpName
+    GetJpName --> CheckResult
 
     CheckResult -->|"信頼度 50%以上"| Found
     CheckResult -->|"信頼度 50%未満"| Candidates
     CheckResult -->|"花が見つからない"| NotFound
 
-    Found --> AskLocation
+    Found --> CheckLocSetting
     Candidates --> SelectCandidate
-    SelectCandidate --> AskLocation
+    SelectCandidate --> CheckLocSetting
     NotFound -->|"もういちど\nさつえいする"| OpenCamera
 
-    AskLocation --> LocationChoice
-    LocationChoice -->|"いまの ばしょ"| AutoGPS
-    LocationChoice -->|"ちずで えらぶ"| MapPicker
-
+    CheckLocSetting -->|"ON"| AutoGPS
+    CheckLocSetting -->|"OFF"| Saving
     AutoGPS --> GPSResult
-    GPSResult -->|"成功"| LocationSet
-    GPSResult -->|"失敗"| MapPicker
-    MapPicker --> LocationSet
-
-    LocationSet --> SaveChoice
-    LocationChoice -->|"ばしょなしで\nほぞんする"| Saving
-    SaveChoice -->|"ばしょつきで\nほぞんする"| Saving
+    GPSResult -->|"成功"| GPSSuccess
+    GPSResult -->|"失敗"| GPSFail
+    GPSSuccess -->|"この ばしょで OK"| Saving
+    GPSSuccess -->|"ちずで えらぶ"| MapPicker
+    GPSFail -->|"ちずで えらぶ"| MapPicker
+    GPSFail -->|"ばしょなしで ほぞん"| Saving
+    MapPicker --> Saving
 
     Saving --> SaveFirestore
     SaveFirestore --> SaveIndexedDB
@@ -275,9 +280,9 @@ flowchart TD
 
 | ステップ | 何が起こるか | 関係するサービス |
 |---------|------------|----------------|
-| 1. 撮影 | カメラで写真を撮り、画像を小さく圧縮する | 端末のカメラ |
-| 2. AI判定 | 写真をPl@ntNet APIに送り、花の名前を判定する | Cloudflare Pages Functions → Pl@ntNet API |
-| 3. 場所選択 | GPS自動取得か地図タップで撮影場所を記録する（省略も可能） | 端末のGPS、OpenStreetMap |
+| 1. 撮影 | カメラで写真を撮り、画像を小さく圧縮する。「しらべる」ボタンで判定開始 | 端末のカメラ |
+| 2. AI判定 | 写真をPl@ntNet APIに送り、花の名前を判定する。日本語名はWikipediaで3段階検索 | Cloudflare Pages Functions → Pl@ntNet API、Wikipedia API |
+| 3. 場所選択 | 設定がONの場合のみ。GPS自動取得→「OK/ちずで えらぶ」の2択。OFFなら即保存 | 端末のGPS、OpenStreetMap |
 | 4. 保存 | テキスト情報をFirestoreに、写真を端末のIndexedDBに保存する | Firebase Firestore、IndexedDB |
 | 5. 完了 | 保存完了を表示し、詳細画面かホームに移動する | -- |
 
@@ -321,6 +326,12 @@ erDiagram
         string reason "ブロック理由"
     }
 
+    allowed_emails {
+        string email PK "メールアドレス（=ドキュメントID）"
+        timestamp addedAt "追加日時"
+        string addedBy "追加した管理者のメール"
+    }
+
     apiUsage {
         string docId PK "user_UID_日付 or global_日付"
         string userId "ユーザー固有ID"
@@ -344,6 +355,7 @@ erDiagram
 | `users` | ログインしたユーザーの基本情報 | ユーザー数と同じ（約5件） |
 | `records` | 花の撮影記録（名前、日時、場所など） | 撮影のたびに1件増加 |
 | `blocked_users` | 利用停止されたユーザーのリスト | 通常は0件 |
+| `allowed_emails` | **利用を許可されたメールアドレスのリスト（ホワイトリスト）** | ユーザー数と同程度 |
 | `apiUsage` | 花の判定を何回使ったかの記録（1日ごと） | ユーザー数 x 日数 + 日数 |
 | `admin_logs` | 管理者が行った操作の記録 | 操作のたびに1件増加 |
 
@@ -373,6 +385,7 @@ erDiagram
     users ||--o{ apiUsage : "1人のユーザーが\n日ごとの利用回数を持つ"
     users ||--o| blocked_users : "1人のユーザーが\nブロックされることがある"
     users ||--o{ admin_logs : "管理者の操作対象\nとなることがある"
+    allowed_emails ||--o| users : "許可メールが\nユーザー登録に対応"
 
     users {
         string uid PK
@@ -403,6 +416,12 @@ erDiagram
         string blockedBy
     }
 
+    allowed_emails {
+        string email PK
+        timestamp addedAt
+        string addedBy
+    }
+
     admin_logs {
         string logId PK
         string action
@@ -426,6 +445,7 @@ erDiagram
 | users → apiUsage | 1人のユーザーは、日ごとに0件以上の利用回数記録を持つ |
 | users → blocked_users | 1人のユーザーは、ブロックされる場合（0件）とされない場合（1件）がある |
 | users → admin_logs | 管理者の操作対象として、0件以上のログに記録される |
+| allowed_emails → users | 許可メールアドレスは、ユーザー登録に対応する（ログイン前に登録が必要） |
 
 ---
 
@@ -507,7 +527,7 @@ flowchart TB
         C5["地図で撮影場所を見る"]
         C6["花の詳しい情報を読む（Wikipedia）"]
         C7["バッジを集める"]
-        C8["今月の成果を確認する"]
+        C8["サマリー（枚数・種類・都道府県）を確認する"]
     end
 
     subgraph ParentActions["保護者ができること"]
@@ -520,12 +540,13 @@ flowchart TB
     end
 
     subgraph AdminActions["管理者ができること"]
-        A1["全ユーザーの一覧を見る"]
-        A2["新規ユーザーを確認する"]
-        A3["不正ユーザーをブロックする"]
-        A4["ブロックを解除する"]
-        A5["全撮影記録を閲覧する"]
-        A6["API使用量を監視する"]
+        A1["許可メールアドレスを追加・削除する"]
+        A2["全ユーザーの一覧を見る"]
+        A3["新規ユーザーを確認する"]
+        A4["不正ユーザーをブロックする"]
+        A5["ブロックを解除する"]
+        A6["全撮影記録を閲覧する"]
+        A7["API使用量を監視する"]
     end
 
     Child --> ChildActions
@@ -545,8 +566,9 @@ flowchart TB
 | 関係 | 説明 |
 |------|------|
 | 子ども ⊂ 保護者 | 保護者は子どもと同じ機能を全て使える。加えて、設定変更やPDF出力もできる |
-| 保護者 ⊂ 管理者 | 管理者は保護者と同じ機能を全て使える。加えて、ユーザー管理やAPI監視もできる |
+| 保護者 ⊂ 管理者 | 管理者は保護者と同じ機能を全て使える。加えて、許可メール管理やユーザー管理、API監視もできる |
 | 共有アカウント | 保護者のGoogleアカウントを家族で共有して使う想定 |
+| 招待制 | 管理者が許可メールアドレスを登録しないとアプリを利用できない |
 
 ### 各操作の詳細
 
@@ -554,22 +576,23 @@ flowchart TB
 |---|------|------------|------|
 | C1 | 花を撮影する | ホーム → カメラ | 端末のカメラが起動する |
 | C2 | 花の名前を調べる | 結果画面 | 1日100回まで。全ユーザー合計500回まで |
-| C3 | 撮影場所を記録する | 結果画面（場所選択ステップ） | GPS自動取得 or 地図タップ。省略も可能 |
+| C3 | 撮影場所を記録する | 結果画面（場所選択ステップ） | 設定がONの場合のみ。GPS→2択のシンプルフロー |
 | C4 | 図鑑を見る | 図鑑画面 | 年別フィルタで絞り込み可能 |
 | C5 | 地図を見る | 地図画面 | 位置情報がある撮影のみ表示 |
 | C6 | 詳しい情報を読む | 詳細画面 | Wikipediaから自動取得 |
-| C7 | バッジを集める | ホーム画面 | 1, 5, 10, 20, 50種類でバッジ獲得 |
-| P1 | ログインする | ログイン画面 | Google SSO を使用 |
+| C8 | サマリーを確認する | ホーム画面 | 枚数・種類・都道府県数を表示 |
+| P1 | ログインする | ログイン画面 | Google SSO。ホワイトリストに登録済みのメールのみ |
 | P2 | テーマを変更する | 設定画面 | 背景7色、ボタン6色、花アイコン8種 |
 | P5 | PDFアルバム出力 | 図鑑画面 | 年別または全件でPDF生成 |
-| A3 | ブロックする | 管理者画面 | ブロックされたユーザーはログインできなくなる |
+| A1 | 許可メール管理 | 管理者画面 | メールアドレスの追加・削除。管理者は削除不可 |
+| A4 | ブロックする | 管理者画面 | ブロックされたユーザーはログインできなくなる |
 
 ---
 
 ## 8. 認証・認可フロー図
 
 > **この図は何を表しているか:**
-> ユーザーがログインしてからアプリを使えるようになるまでの流れを示しています。途中で「このユーザーは使っていいか？」のチェックが入ります。
+> ユーザーがログインしてからアプリを使えるようになるまでの流れを示しています。途中で「このユーザーは使っていいか？」の3段階チェックが入ります。
 
 ```mermaid
 flowchart TD
@@ -580,11 +603,14 @@ flowchart TD
     LoginResult{"ログイン\n成功？"}
     LoginFail["ログイン失敗\nエラー表示"]
 
+    CheckWhitelist{"ホワイトリスト\n（allowed_emails）\nに登録されている？\nor 管理者？"}
+    NotAllowedScreen["「このアプリは\nしょうたいせいです」\n管理者への登録依頼を案内\nログアウトボタン"]
+
     CheckBlock{"ブロックリスト\nに登録されて\nいる？"}
-    BlockScreen["「ご利用を停止しました」\n表示してログアウト"]
+    BlockScreen["「ごりようを ていししました」\n問い合わせ先を表示"]
 
     CheckUser{"Firestore に\nユーザー情報が\nある？"}
-    CreateUser["新規ユーザー登録\n・email\n・displayName\n・firstLoginAt\n・reviewedByAdmin: false"]
+    CreateUser["新規ユーザー登録\n・email\n・displayName\n・firstLoginAt\n・reviewedByAdmin: false\n・settings: locationDefaultOn: true"]
     UpdateUser["lastLoginAt を更新"]
 
     CheckAdmin{"管理者\nメールアドレス？"}
@@ -594,13 +620,17 @@ flowchart TD
     Home["ホーム画面を表示"]
 
     Start --> CheckAuth
-    CheckAuth -->|"はい"| CheckBlock
+    CheckAuth -->|"はい"| CheckWhitelist
     CheckAuth -->|"いいえ"| LoginPage
     LoginPage --> GoogleLogin
     GoogleLogin --> LoginResult
-    LoginResult -->|"成功"| CheckBlock
+    LoginResult -->|"成功"| CheckWhitelist
     LoginResult -->|"失敗"| LoginFail
     LoginFail --> LoginPage
+
+    CheckWhitelist -->|"いいえ\n（未登録かつ非管理者）"| NotAllowedScreen
+    CheckWhitelist -->|"はい\n（登録済み or 管理者）"| CheckBlock
+    NotAllowedScreen -->|"ログアウト"| LoginPage
 
     CheckBlock -->|"はい\n（ブロック済み）"| BlockScreen
     CheckBlock -->|"いいえ\n（問題なし）"| CheckUser
@@ -617,6 +647,7 @@ flowchart TD
     SetNormal --> Home
 
     style Start fill:#E8EAF6,stroke:#283593
+    style NotAllowedScreen fill:#FFF3E0,stroke:#E65100
     style BlockScreen fill:#FFCDD2,stroke:#B71C1C
     style Home fill:#C8E6C9,stroke:#1B5E20
     style CreateUser fill:#FFF9C4,stroke:#F9A825
@@ -628,6 +659,7 @@ flowchart TD
 | 段階 | 説明 |
 |------|------|
 | ログイン確認 | アプリを開いたとき、Firebase Authentication が以前のログイン状態を自動的に復元する |
+| ホワイトリストチェック | Firestore の `allowed_emails` コレクションにそのメールアドレスがないか確認する。管理者メールは常に許可される |
 | ブロックチェック | Firestore の `blocked_users` コレクションにそのメールアドレスがないか確認する |
 | 新規/既存判定 | Firestore の `users` コレクションにそのユーザーのIDがあるか確認する |
 | 管理者判定 | メールアドレスが `nomurakengo@gmail.com` と一致するかどうかで判定する |
@@ -637,7 +669,7 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph Guards["画面保護の仕組み"]
-        AG["AuthGuard\n（認証ガード）"]
+        AG["AuthGuard\n（認証ガード）\n3段階チェック:\n1. ホワイトリスト\n2. ブロック\n3. ログイン状態"]
         ADG["AdminGuard\n（管理者ガード）"]
     end
 
@@ -657,12 +689,13 @@ flowchart LR
     end
 
     subgraph AdminPages["AuthGuard + AdminGuard で保護された画面"]
-        AP1["管理者ダッシュボード"]
+        AP1["管理者ダッシュボード\n（許可メール管理含む）"]
         AP2["ユーザー一覧"]
         AP3["撮影記録一覧"]
     end
 
     AG -->|"未ログイン\n→ ログイン画面へ"| P1
+    AG -->|"ホワイトリスト未登録\n→ 招待制案内画面"| P1
     ADG -->|"管理者でない\n→ ホーム画面へ"| PP1
 
     style PublicPages fill:#E8F5E9,stroke:#2E7D32
@@ -683,6 +716,7 @@ flowchart TD
         Self["本人\n（自分のデータ）"]
         Other["他のユーザー\n（他人のデータ）"]
         AdminUser["管理者\n（nomurakengo@gmail.com）"]
+        NotAllowedUser["未許可ユーザー\n（ホワイトリスト未登録）"]
         Anon["未ログインの人"]
     end
 
@@ -690,40 +724,46 @@ flowchart TD
         UsersData["ユーザー情報\n（users）"]
         RecordsData["撮影記録\n（records）"]
         BlockedData["ブロックリスト\n（blocked_users）"]
+        AllowedData["許可メールリスト\n（allowed_emails）"]
         ApiData["API利用回数\n（apiUsage）"]
         LogsData["管理者ログ\n（admin_logs）"]
     end
 
-    Self -->|"読み書きOK"| UsersData
-    Self -->|"読み書きOK"| RecordsData
+    Self -->|"読み書きOK\n（更新はsettingsと\nlastLoginAtのみ）"| UsersData
+    Self -->|"読み書きOK\n（更新はphotoLocalKeyのみ）"| RecordsData
     Self -->|"自分の分だけ\n読みOK"| BlockedData
-    Self -->|"読み書きOK"| ApiData
+    Self -->|"自分の分だけ\n読みOK"| AllowedData
+    Self -->|"読み書きOK\n（更新はcountのみ）"| ApiData
 
     AdminUser -->|"読み書きOK"| UsersData
     AdminUser -->|"読みOK"| RecordsData
     AdminUser -->|"読み書きOK"| BlockedData
+    AdminUser -->|"読み書きOK"| AllowedData
     AdminUser -->|"読み書きOK"| ApiData
     AdminUser -->|"読み書きOK"| LogsData
 
     Other -.->|"アクセス不可"| UsersData
     Other -.->|"アクセス不可"| RecordsData
+    NotAllowedUser -.->|"自分のallowed_emails\nのみ読みOK\n（存在チェック用）"| AllowedData
     Anon -.->|"全て\nアクセス不可"| Data
 
     style Self fill:#C8E6C9,stroke:#1B5E20
     style AdminUser fill:#FCE4EC,stroke:#880E4F
     style Other fill:#FFECB3,stroke:#FF6F00
+    style NotAllowedUser fill:#FFF3E0,stroke:#E65100
     style Anon fill:#FFCDD2,stroke:#B71C1C
 ```
 
 ### アクセス権限の一覧表
 
-| データ（コレクション） | 未ログイン | 本人 | 他のユーザー | 管理者 |
-|----------------------|-----------|------|------------|--------|
-| **ユーザー情報**（users） | 不可 | 読み書き可 | 不可 | 読み書き可 |
-| **撮影記録**（records） | 不可 | 読み書き可 | 不可 | 読みのみ可 |
-| **ブロックリスト**（blocked_users） | 不可 | 自分の分のみ読み可 | 不可 | 読み書き可 |
-| **API利用回数**（apiUsage） | 不可 | 読み書き可 | 読み書き可 | 読み書き可 |
-| **管理者ログ**（admin_logs） | 不可 | 不可 | 不可 | 読み書き可 |
+| データ（コレクション） | 未ログイン | 未許可ユーザー | 本人 | 他のユーザー | 管理者 |
+|----------------------|-----------|-------------|------|------------|--------|
+| **ユーザー情報**（users） | 不可 | 不可 | 読み可、更新はsettings/lastLoginAtのみ | 不可 | 読み書き可 |
+| **撮影記録**（records） | 不可 | 不可 | 読み書き可（更新はphotoLocalKeyのみ） | 不可 | 読みのみ可 |
+| **ブロックリスト**（blocked_users） | 不可 | 不可 | 自分の分のみ読み可 | 不可 | 読み書き可 |
+| **許可メールリスト**（allowed_emails） | 不可 | 自分の分のみ読み可 | 自分の分のみ読み可 | 不可 | 読み書き可 |
+| **API利用回数**（apiUsage） | 不可 | 不可 | 読み書き可（更新はcountのみ） | 読み書き可 | 読み書き可 |
+| **管理者ログ**（admin_logs） | 不可 | 不可 | 不可 | 不可 | 読み書き可 |
 
 ### Firestore セキュリティルールの日本語説明
 
@@ -731,14 +771,15 @@ flowchart TD
 flowchart TD
     subgraph UsersRule["users（ユーザー情報）のルール"]
         UR1["読み取り: 自分のデータ or 管理者ならOK"]
-        UR2["作成: 自分のデータならOK"]
-        UR3["更新: 自分のデータ or 管理者ならOK"]
+        UR2["作成: 自分のデータで必須フィールドありならOK\nreviewedByAdmin は必ず false"]
+        UR3["更新: 自分は settings と lastLoginAt のみ\n管理者は全フィールドOK"]
     end
 
     subgraph RecordsRule["records（撮影記録）のルール"]
         RR1["読み取り: 自分の記録 or 管理者ならOK"]
-        RR2["作成: 自分のユーザーIDが入っていればOK"]
-        RR3["更新・削除: 自分の記録ならOK"]
+        RR2["作成: 自分のIDで必須フィールドありならOK\nconfidence は 0〜1 の数値"]
+        RR3["更新: 自分の記録の photoLocalKey のみOK"]
+        RR4["削除: 自分の記録ならOK"]
     end
 
     subgraph BlockedRule["blocked_users（ブロックリスト）のルール"]
@@ -746,20 +787,32 @@ flowchart TD
         BR2["書き込み: 管理者のみOK"]
     end
 
+    subgraph AllowedRule["allowed_emails（許可メールリスト）のルール"]
+        AER1["読み取り: 自分のメールアドレス分 or 管理者ならOK"]
+        AER2["書き込み: 管理者のみOK"]
+    end
+
     subgraph ApiRule["apiUsage（API利用回数）のルール"]
         AR1["読み取り: ログイン済みならOK"]
-        AR2["作成・更新: ログイン済みならOK"]
+        AR2["作成: ログイン済みでIDパターン一致ならOK"]
+        AR3["更新: ログイン済みで count のみ変更ならOK"]
     end
 
     subgraph LogsRule["admin_logs（管理者ログ）のルール"]
         LR1["読み書き: 管理者のみOK"]
     end
 
+    subgraph CatchAll["その他のルール"]
+        CA1["定義外のコレクション: 全てアクセス不可"]
+    end
+
     style UsersRule fill:#E3F2FD,stroke:#1565C0
     style RecordsRule fill:#E8F5E9,stroke:#2E7D32
     style BlockedRule fill:#FFF3E0,stroke:#E65100
+    style AllowedRule fill:#FFFDE7,stroke:#F9A825
     style ApiRule fill:#F3E5F5,stroke:#6A1B9A
     style LogsRule fill:#FCE4EC,stroke:#880E4F
+    style CatchAll fill:#FFCDD2,stroke:#B71C1C
 ```
 
 ### その他のセキュリティ対策
@@ -767,8 +820,13 @@ flowchart TD
 | 対策 | 説明 |
 |------|------|
 | HTTPS通信 | アプリとサーバー間の通信は全て暗号化されている |
-| APIキーの保護 | Pl@ntNet のAPIキーはサーバー側（Cloudflare Pages Functions）で管理し、スマホからは直接見えない |
+| ホワイトリスト認証 | 管理者が許可したメールアドレスでしかアプリを利用できない（招待制） |
+| APIキーの保護 | Pl@ntNet のAPIキーはサーバー側（Cloudflare Pages Functions）の環境変数で管理し、スマホからは直接見えない |
+| APIプロキシのOrigin制限 | 許可されたドメインからのリクエストのみ受け付ける |
+| APIプロキシのパス制限 | `/v2/identify/` パスのみに制限し、任意のエンドポイントへの転送を防止 |
 | API利用回数制限 | 1ユーザー100回/日、全ユーザー合計500回/日まで |
+| フィールドレベル検証 | ユーザーが更新できるフィールドを厳密に制限（例: settingsとlastLoginAtのみ） |
+| デフォルト拒否 | 定義外のコレクションへのアクセスは全て拒否 |
 | ブロック機能 | 不正利用が発覚した場合、管理者がそのユーザーのアクセスを即座に停止できる |
 | 子どもの位置情報保護 | 撮影場所の情報は本人と管理者しか見られない。他のユーザーには公開されない |
 | 画像のローカル保存 | 撮影写真はクラウドに送信されないため、写真の流出リスクを低減 |
@@ -791,3 +849,4 @@ flowchart TD
 | ドキュメント | Firestore におけるデータの1件分（ファイルのようなもの） |
 | フィールド | ドキュメント内の各項目（Excel のセルのようなもの） |
 | カーディナリティ | テーブル間の数量関係（1対1、1対多など） |
+| ホワイトリスト | 許可されたもののリスト。このアプリでは、利用を許可されたメールアドレスのリスト |
