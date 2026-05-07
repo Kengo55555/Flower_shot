@@ -53,7 +53,7 @@ export default function CameraPage() {
                 onClick={handleProceed}
                 className="flex-1 bg-pink text-white rounded-full py-3 font-bold text-base"
               >
-                この しゃしんで しらべる
+                しらべる
               </button>
             </div>
           </div>

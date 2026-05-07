@@ -27,13 +27,12 @@ export default function ResultPage() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [limitMessage, setLimitMessage] = useState("");
 
-  // 場所関連
   const [pickedLocation, setPickedLocation] = useState<GeoLocation | null>(null);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [gettingGps, setGettingGps] = useState(false);
-
-  // 保存関連
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
+
+  const locationOn = user?.settings.locationDefaultOn ?? true;
 
   // 花の判定
   useEffect(() => {
@@ -73,39 +72,26 @@ export default function ResultPage() {
     return () => { cancelled = true; };
   }, [compressedBlob, user, navigate]);
 
-  const canProceedToLocation =
+  const canProceed =
     result?.status === "found" ||
     (result?.status === "candidates" && selectedIndex !== null);
 
-  const handleGoToLocation = () => {
+  // 「つぎへ」ボタン: 位置情報ONなら場所取得→場所選択、OFFなら即保存
+  const handleNext = async () => {
+    if (!locationOn) {
+      handleSave(false);
+      return;
+    }
     setStep("location");
-    // 場所選択ステップに入ったら自動でGPS取得開始
-    autoGps();
-  };
-
-  const autoGps = async () => {
     setGettingGps(true);
     const loc = await getCurrentLocation();
     setGettingGps(false);
     if (loc) {
       setPickedLocation(loc);
     }
-    // 失敗しても何も表示しない（手動ボタンがあるので）
   };
 
-  const handleManualGps = async () => {
-    setGettingGps(true);
-    const loc = await getCurrentLocation();
-    setGettingGps(false);
-    if (loc) {
-      setPickedLocation(loc);
-    } else {
-      alert("いちじょうほうが とれなかったよ。ちずから えらんでね");
-      setShowMapPicker(true);
-    }
-  };
-
-  const handleSave = async (withLocation: boolean) => {
+  const handleSave = async (withLocation: boolean, overrideLocation?: GeoLocation | null) => {
     if (!user || !compressedBlob) return;
 
     const flowerName =
@@ -121,7 +107,7 @@ export default function ResultPage() {
         ? result.topResult!.confidence
         : result?.candidates[selectedIndex!]?.confidence || 0;
 
-    const location = withLocation ? pickedLocation : null;
+    const location = withLocation ? (overrideLocation ?? pickedLocation) : null;
 
     setStep("saving");
     try {
@@ -159,10 +145,8 @@ export default function ResultPage() {
 
       <div className="flex-1 px-4 py-6">
 
-        {/* ステップ1: 判定中 */}
         {step === "identifying" && <Loading />}
 
-        {/* 利用制限 */}
         {limitMessage && (
           <div className="text-center py-16">
             <p className="text-5xl mb-4">😴</p>
@@ -176,7 +160,6 @@ export default function ResultPage() {
           </div>
         )}
 
-        {/* エラー */}
         {error && (
           <div className="text-center py-16">
             <p className="text-5xl mb-4">😢</p>
@@ -190,7 +173,7 @@ export default function ResultPage() {
           </div>
         )}
 
-        {/* ステップ2: 判定結果 */}
+        {/* 判定結果 */}
         {step === "result" && !error && !limitMessage && result && (
           <>
             {result.status === "not_found" && (
@@ -224,81 +207,73 @@ export default function ResultPage() {
               />
             )}
 
-            {canProceedToLocation && (
+            {canProceed && (
               <button
-                onClick={handleGoToLocation}
+                onClick={handleNext}
                 className="w-full mt-6 bg-green text-white rounded-full py-4 font-bold text-lg"
               >
-                つぎへ → ばしょを きろくする
+                ほぞんする
               </button>
             )}
           </>
         )}
 
-        {/* ステップ3: 場所選択 */}
+        {/* 場所選択（シンプル2択） */}
         {step === "location" && (
           <div>
-            <p className="text-xl font-bold text-center mb-4">
-              📍 ばしょを きろくする？
-            </p>
-
-            {gettingGps && !pickedLocation && (
-              <div className="text-center py-4 mb-4">
-                <p className="text-base animate-float">📡</p>
-                <p className="text-sm text-gray-500 mt-2">いまの ばしょを とっているよ...</p>
+            {gettingGps && (
+              <div className="text-center py-8">
+                <p className="text-3xl animate-float">📡</p>
+                <p className="text-sm text-gray-500 mt-3">ばしょを とっているよ...</p>
               </div>
             )}
 
-            {pickedLocation && (
-              <div className="bg-green-light rounded-xl p-3 mb-4 text-center">
-                <p className="text-sm font-bold text-green">✅ ばしょを とれたよ！</p>
+            {!gettingGps && pickedLocation && (
+              <div className="text-center py-4">
+                <p className="text-3xl mb-2">📍</p>
+                <p className="text-base font-bold mb-6">ばしょが とれたよ！</p>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => handleSave(true)}
+                    className="w-full bg-green text-white rounded-full py-4 font-bold text-lg"
+                  >
+                    この ばしょで OK
+                  </button>
+                  <button
+                    onClick={() => setShowMapPicker(true)}
+                    className="w-full bg-white border-2 border-gray-200 rounded-full py-3 font-bold text-base"
+                  >
+                    ちずで えらぶ
+                  </button>
+                </div>
               </div>
             )}
 
             {!gettingGps && !pickedLocation && (
-              <div className="bg-yellow rounded-xl p-3 mb-4 text-center">
-                <p className="text-sm">じどうで とれなかったよ。したの ボタンから えらんでね</p>
+              <div className="text-center py-4">
+                <p className="text-3xl mb-2">📍</p>
+                <p className="text-base font-bold mb-6">ばしょが とれなかったよ</p>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setShowMapPicker(true)}
+                    className="w-full bg-green text-white rounded-full py-4 font-bold text-lg"
+                  >
+                    ちずで えらぶ
+                  </button>
+                  <button
+                    onClick={() => handleSave(false)}
+                    className="w-full bg-white border-2 border-gray-200 rounded-full py-3 font-bold text-base"
+                  >
+                    ばしょなしで ほぞん
+                  </button>
+                </div>
               </div>
             )}
-
-            <div className="flex gap-2 mb-4">
-              <button
-                onClick={handleManualGps}
-                disabled={gettingGps}
-                className="flex-1 bg-white rounded-xl p-3 text-sm font-bold text-center shadow-sm active:scale-95 disabled:opacity-50"
-              >
-                📍 もういちど とる
-              </button>
-              <button
-                onClick={() => setShowMapPicker(true)}
-                className="flex-1 bg-white rounded-xl p-3 text-sm font-bold text-center shadow-sm active:scale-95"
-              >
-                🗺️ ちずで えらぶ
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => handleSave(true)}
-                disabled={!pickedLocation}
-                className="w-full bg-green text-white rounded-full py-4 font-bold text-lg disabled:opacity-30"
-              >
-                ばしょつきで ほぞんする
-              </button>
-              <button
-                onClick={() => handleSave(false)}
-                className="w-full bg-gray-200 rounded-full py-3 font-bold text-base"
-              >
-                ばしょなしで ほぞんする
-              </button>
-            </div>
           </div>
         )}
 
-        {/* ステップ4: 保存中 */}
         {step === "saving" && <Loading message="ほぞんしているよ..." />}
 
-        {/* ステップ5: 完了 */}
         {step === "done" && (
           <div className="text-center animate-bounce-in">
             <p className="text-5xl mb-2">✅</p>
@@ -327,6 +302,7 @@ export default function ResultPage() {
           onSelect={(loc) => {
             setPickedLocation(loc);
             setShowMapPicker(false);
+            handleSave(true, loc);
           }}
           onClose={() => setShowMapPicker(false)}
         />
