@@ -71,6 +71,17 @@ service cloud.firestore {
     }
 
     // ============================
+    // 許可メールアドレス（ホワイトリスト）
+    // ============================
+    match /allowed_emails/{email} {
+      // 認証済みユーザーは自分のメールアドレスのみ読み取り可能（ログイン時チェック用）
+      allow read: if request.auth.token.email == email
+                  || request.auth.token.email == "nomurakengo@gmail.com";
+      // 書き込みは管理者のみ
+      allow write: if request.auth.token.email == "nomurakengo@gmail.com";
+    }
+
+    // ============================
     // 管理者操作ログ（管理者のみ）
     // ============================
     match /admin_logs/{logId} {

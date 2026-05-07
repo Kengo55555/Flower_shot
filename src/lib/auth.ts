@@ -8,10 +8,14 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
+  getDocs,
+  collection,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
+import { ADMIN_EMAIL } from "../constants";
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -28,6 +32,31 @@ export async function checkBlocked(email: string): Promise<boolean> {
   const docRef = doc(db, "blocked_users", email);
   const docSnap = await getDoc(docRef);
   return docSnap.exists();
+}
+
+export async function checkAllowed(email: string): Promise<boolean> {
+  // 管理者は常に許可
+  if (email === ADMIN_EMAIL) return true;
+  const docRef = doc(db, "allowed_emails", email);
+  const docSnap = await getDoc(docRef);
+  return docSnap.exists();
+}
+
+export async function getAllowedEmails(): Promise<string[]> {
+  const snap = await getDocs(collection(db, "allowed_emails"));
+  return snap.docs.map((d) => d.id);
+}
+
+export async function addAllowedEmail(email: string): Promise<void> {
+  await setDoc(doc(db, "allowed_emails", email), {
+    email,
+    addedAt: serverTimestamp(),
+    addedBy: ADMIN_EMAIL,
+  });
+}
+
+export async function removeAllowedEmail(email: string): Promise<void> {
+  await deleteDoc(doc(db, "allowed_emails", email));
 }
 
 export async function registerOrUpdateUser(

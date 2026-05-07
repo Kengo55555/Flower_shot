@@ -7,7 +7,7 @@ import {
 } from "react";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { auth } from "../lib/firebase";
-import { checkBlocked, registerOrUpdateUser } from "../lib/auth";
+import { checkBlocked, checkAllowed, registerOrUpdateUser } from "../lib/auth";
 import { getUserProfile } from "../lib/firestore";
 import { ADMIN_EMAIL } from "../constants";
 import type { User } from "../types";
@@ -17,6 +17,7 @@ interface AuthState {
   firebaseUser: FirebaseUser | null;
   isLoading: boolean;
   isBlocked: boolean;
+  isNotAllowed: boolean;
   isAdmin: boolean;
 }
 
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthState>({
   firebaseUser: null,
   isLoading: true,
   isBlocked: false,
+  isNotAllowed: false,
   isAdmin: false,
 });
 
@@ -34,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     firebaseUser: null,
     isLoading: true,
     isBlocked: false,
+    isNotAllowed: false,
     isAdmin: false,
   });
 
@@ -45,12 +48,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           firebaseUser: null,
           isLoading: false,
           isBlocked: false,
+          isNotAllowed: false,
           isAdmin: false,
         });
         return;
       }
 
       try {
+        // 1. ホワイトリストチェック
+        const allowed = await checkAllowed(fbUser.email);
+        if (!allowed) {
+          setState({
+            user: null,
+            firebaseUser: fbUser,
+            isLoading: false,
+            isBlocked: false,
+            isNotAllowed: true,
+            isAdmin: false,
+          });
+          return;
+        }
+
+        // 2. ブロックチェック
         const blocked = await checkBlocked(fbUser.email);
         if (blocked) {
           setState({
@@ -58,11 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             firebaseUser: fbUser,
             isLoading: false,
             isBlocked: true,
+            isNotAllowed: false,
             isAdmin: false,
           });
           return;
         }
 
+        // 3. ユーザー登録/更新
         await registerOrUpdateUser(fbUser);
         const profile = await getUserProfile(fbUser.uid);
 
@@ -71,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           firebaseUser: fbUser,
           isLoading: false,
           isBlocked: false,
+          isNotAllowed: false,
           isAdmin: fbUser.email === ADMIN_EMAIL,
         });
       } catch {
@@ -79,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           firebaseUser: fbUser,
           isLoading: false,
           isBlocked: false,
+          isNotAllowed: false,
           isAdmin: false,
         });
       }
