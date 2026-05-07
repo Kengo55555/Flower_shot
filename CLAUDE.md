@@ -34,8 +34,9 @@
 - コミットメッセージは日本語OK
 
 ## ドキュメント
-- 要件定義書: `flower_shot_requirements.md`
-- 基本設計仕様書: `docs/basic-design.md`
+- 要件定義書: `docs/01-requirements.md`
+- 基本設計仕様書: `docs/02-basic-design.md`
+- 詳細設計書: `docs/03-detailed-design/`
 
 ## 開発コマンド
 ```bash

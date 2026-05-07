@@ -1,7 +1,7 @@
 # Flower Shot 基本設計仕様書
 
 最終更新日: 2026-05-01
-要件定義書: `flower_shot_requirements.md` v2.0 に準拠
+要件定義書: `01-requirements.md` v2.0 に準拠
 
 ---
 
